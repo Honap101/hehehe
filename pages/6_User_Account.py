@@ -1,10 +1,23 @@
 import streamlit as st
 import base64
 from datetime import datetime
-import hashlib
-import uuid
-import time
-import random
+import os
+
+# Optional imports with fallbacks
+try:
+    import gspread
+    from google.oauth2.service_account import Credentials
+    SHEETS_AVAILABLE = True
+except ImportError:
+    SHEETS_AVAILABLE = False
+    st.warning("Google Sheets integration unavailable. Install gspread and google-auth for full functionality.")
+
+try:
+    from supabase import create_client
+    SUPABASE_AVAILABLE = True
+except ImportError:
+    SUPABASE_AVAILABLE = False
+    st.error("Supabase not available. Install supabase for authentication functionality.")
 
 def get_base64_image(image_path):
     with open(image_path, "rb") as f:
@@ -36,7 +49,7 @@ with st.sidebar:
         unsafe_allow_html=True
     )
 
-# --- Professional Authentication Page Styling ---
+# --- CSS for sidebar background with gradient overlay ---
 st.markdown(
     f"""
     <style>
@@ -46,191 +59,94 @@ st.markdown(
         background-size: cover;
     }}
 
+    /* Make all sidebar text white */
     [data-testid="stSidebar"] * {{
         color: white;
     }}
 
-    /* Global Layout */
-    .main {{
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        min-height: 100vh;
-    }}
-
-    .auth-layout {{
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 90vh;
-        padding: 2rem 1rem;
-    }}
-
-    .auth-container {{
-        width: 100%;
-        max-width: 480px;
-        margin: 0 auto;
+    /* Clean modern layout */
+    .main-container {{
+        max-width: 450px;
+        margin: 3rem auto;
+        padding: 0 1rem;
     }}
 
     .auth-card {{
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 24px;
-        padding: 3.5rem 3rem;
-        box-shadow: 
-            0 32px 64px rgba(0, 0, 0, 0.08),
-            0 16px 32px rgba(0, 0, 0, 0.04),
-            inset 0 1px 0 rgba(255, 255, 255, 0.4);
-        position: relative;
-        overflow: hidden;
-    }}
-
-    .auth-card::before {{
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 4px;
-        background: linear-gradient(90deg, #fc3134, #ff5f1f, #ffc542);
-        border-radius: 24px 24px 0 0;
-    }}
-
-    /* Header Section */
-    .auth-header {{
+        background: white;
+        border-radius: 20px;
+        padding: 3rem 2.5rem;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+        border: 1px solid #f1f5f9;
         text-align: center;
+    }}
+
+    .brand-header {{
         margin-bottom: 3rem;
-        position: relative;
     }}
 
-    .auth-logo {{
-        width: 64px;
-        height: 64px;
-        background: linear-gradient(135deg, #fc3134, #ffc542);
-        border-radius: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto 1.5rem auto;
-        box-shadow: 0 8px 24px rgba(252, 49, 52, 0.2);
-        position: relative;
-    }}
-
-    .auth-logo::after {{
-        content: '⌧';
-        color: white;
-        font-size: 2rem;
-        font-weight: 700;
-    }}
-
-    .auth-title {{
-        font-size: 2rem;
+    .brand-title {{
+        font-size: 2.5rem;
         font-weight: 800;
         background: linear-gradient(135deg, #fc3134, #ff5f1f, #ffc542);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         margin-bottom: 0.75rem;
-        line-height: 1.3;
-        letter-spacing: -0.02em;
+        line-height: 1.2;
     }}
 
-    .auth-subtitle {{
+    .brand-subtitle {{
         color: #64748b;
-        font-size: 1rem;
+        font-size: 1.1rem;
         font-weight: 400;
-        line-height: 1.6;
-        max-width: 300px;
-        margin: 0 auto;
+        line-height: 1.5;
     }}
 
-    /* Tab Styling */
-    .stTabs [data-baseweb="tab-list"] {{
-        gap: 0;
-        background: #f1f5f9;
-        border-radius: 16px;
-        padding: 6px;
-        margin-bottom: 2rem;
-        border: 1px solid #e2e8f0;
+    .tab-container {{
+        margin: 2rem 0;
     }}
 
-    .stTabs [data-baseweb="tab"] {{
-        border-radius: 12px !important;
-        color: #64748b !important;
-        font-weight: 600 !important;
-        padding: 1rem 1.5rem !important;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        border: none !important;
-        font-size: 0.95rem !important;
-    }}
-
-    .stTabs [aria-selected="true"] {{
-        background: white !important;
-        color: #fc3134 !important;
-        box-shadow: 
-            0 2px 8px rgba(0, 0, 0, 0.08),
-            0 1px 4px rgba(0, 0, 0, 0.04) !important;
-        transform: translateY(-1px) !important;
-    }}
-
-    /* Form Styling */
+    /* Form styling */
     .form-container {{
-        margin-top: 1.5rem;
+        padding: 2rem 0;
+        text-align: left;
     }}
 
-    .form-group {{
-        margin-bottom: 1.75rem;
-        position: relative;
+    .form-section {{
+        margin-bottom: 1.5rem;
     }}
 
-    .form-label {{
-        display: block;
+    .input-label {{
         font-weight: 600;
         color: #374151;
-        font-size: 0.875rem;
-        margin-bottom: 0.75rem;
-        letter-spacing: 0.01em;
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+        display: block;
     }}
 
-    /* Enhanced Input Styling */
+    /* Streamlit input overrides */
     .stTextInput > div > div > input {{
-        border-radius: 16px !important;
+        border-radius: 12px !important;
         border: 2px solid #e5e7eb !important;
-        padding: 1.25rem 1rem !important;
+        padding: 1rem !important;
         font-size: 1rem !important;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        transition: all 0.2s ease !important;
         background: #fafbfc !important;
-        font-weight: 500 !important;
-        color: #1f2937 !important;
     }}
 
     .stTextInput > div > div > input:focus {{
         border-color: #fc3134 !important;
-        box-shadow: 
-            0 0 0 4px rgba(252, 49, 52, 0.1),
-            0 4px 12px rgba(252, 49, 52, 0.15) !important;
+        box-shadow: 0 0 0 4px rgba(252, 49, 52, 0.1) !important;
         background: white !important;
-        transform: translateY(-1px) !important;
-    }}
-
-    .stTextInput > div > div > input::placeholder {{
-        color: #9ca3af !important;
-        font-weight: 400 !important;
-    }}
-
-    /* Checkbox Styling */
-    .stCheckbox {{
-        margin: 1.5rem 0 !important;
     }}
 
     .stCheckbox > label {{
         font-size: 0.9rem !important;
         color: #4b5563 !important;
-        font-weight: 500 !important;
-        line-height: 1.5 !important;
     }}
 
-    /* Button Styling */
+    /* Button styling */
     .auth-button {{
-        margin: 2rem 0 1.5rem 0;
+        margin: 1.5rem 0 1rem 0;
     }}
 
     .stButton > button {{
@@ -238,146 +154,117 @@ st.markdown(
         background: linear-gradient(135deg, #fc3134, #ff5f1f) !important;
         color: white !important;
         border: none !important;
-        border-radius: 16px !important;
-        padding: 1.25rem 2rem !important;
-        font-weight: 700 !important;
-        font-size: 1rem !important;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        letter-spacing: 0.025em !important;
-        box-shadow: 0 4px 12px rgba(252, 49, 52, 0.3) !important;
-        position: relative !important;
-        overflow: hidden !important;
+        border-radius: 12px !important;
+        padding: 1rem 2rem !important;
+        font-weight: 600 !important;
+        font-size: 1.1rem !important;
+        transition: all 0.3s ease !important;
+        letter-spacing: 0.5px !important;
     }}
 
     .stButton > button:hover {{
         transform: translateY(-2px) !important;
-        box-shadow: 0 8px 24px rgba(252, 49, 52, 0.4) !important;
+        box-shadow: 0 8px 25px rgba(252, 49, 52, 0.3) !important;
         background: linear-gradient(135deg, #e02d30, #ff5f1f) !important;
     }}
 
     .stButton > button:active {{
         transform: translateY(0) !important;
-        transition: transform 0.1s !important;
     }}
 
-    /* Message Styling */
+    /* Tab styling */
+    .stTabs [data-baseweb="tab-list"] {{
+        gap: 0;
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 0.25rem;
+    }}
+
+    .stTabs [data-baseweb="tab"] {{
+        border-radius: 10px !important;
+        color: #64748b !important;
+        font-weight: 600 !important;
+        padding: 0.75rem 1.5rem !important;
+        transition: all 0.2s ease !important;
+    }}
+
+    .stTabs [aria-selected="true"] {{
+        background: white !important;
+        color: #fc3134 !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+    }}
+
+    /* Message styling */
     .success-msg {{
-        background: linear-gradient(135deg, #ecfdf5, #d1fae5);
-        border: 1px solid #a7f3d0;
-        color: #065f46;
-        padding: 1.25rem;
-        border-radius: 16px;
-        margin: 1.5rem 0;
-        font-weight: 600;
+        background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+        border: 1px solid #86efac;
+        color: #166534;
+        padding: 1rem;
+        border-radius: 12px;
+        margin: 1rem 0;
+        font-weight: 500;
         text-align: center;
-        font-size: 0.95rem;
-        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
     }}
 
     .error-msg {{
-        background: linear-gradient(135deg, #fef2f2, #fee2e2);
-        border: 1px solid #fca5a5;
+        background: linear-gradient(135deg, #fef2f2, #fecaca);
+        border: 1px solid #f87171;
         color: #dc2626;
-        padding: 1.25rem;
-        border-radius: 16px;
-        margin: 1.5rem 0;
-        font-weight: 600;
+        padding: 1rem;
+        border-radius: 12px;
+        margin: 1rem 0;
+        font-weight: 500;
         text-align: center;
-        font-size: 0.95rem;
-        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1);
     }}
 
     .info-msg {{
         background: linear-gradient(135deg, #eff6ff, #dbeafe);
         border: 1px solid #93c5fd;
         color: #1d4ed8;
-        padding: 1.25rem;
-        border-radius: 16px;
-        margin: 1.5rem 0;
-        font-weight: 600;
+        padding: 1rem;
+        border-radius: 12px;
+        margin: 1rem 0;
+        font-weight: 500;
         text-align: center;
-        font-size: 0.95rem;
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
     }}
 
-    /* User Profile Styling */
+    /* User profile styling */
     .user-profile {{
         background: linear-gradient(135deg, #f0fdf4, #dcfce7);
         border: 2px solid #bbf7d0;
-        border-radius: 24px;
-        padding: 2.5rem;
+        border-radius: 20px;
+        padding: 2rem;
         margin: 2rem 0;
         text-align: center;
-        position: relative;
-        overflow: hidden;
-    }}
-
-    .user-profile::before {{
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 4px;
-        background: linear-gradient(90deg, #10b981, #34d399);
-        border-radius: 24px 24px 0 0;
     }}
 
     .user-avatar {{
-        width: 96px;
-        height: 96px;
+        width: 80px;
+        height: 80px;
         background: linear-gradient(135deg, #fc3134, #ffc542);
-        border-radius: 24px;
+        border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         color: white;
-        font-weight: 800;
-        font-size: 2.5rem;
-        margin: 0 auto 2rem auto;
+        font-weight: bold;
+        font-size: 2rem;
+        margin: 0 auto 1.5rem auto;
         border: 4px solid white;
-        box-shadow: 
-            0 8px 24px rgba(0, 0, 0, 0.1),
-            0 2px 8px rgba(0, 0, 0, 0.06);
-        position: relative;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
     }}
 
     .user-name {{
-        font-size: 1.75rem;
-        font-weight: 800;
+        font-size: 1.5rem;
+        font-weight: 700;
         color: #166534;
         margin-bottom: 0.5rem;
-        letter-spacing: -0.01em;
     }}
 
     .user-email {{
-        color: #059669;
-        font-size: 1.1rem;
-        font-weight: 500;
-        margin-bottom: 1rem;
-    }}
-
-    .user-status {{
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.5rem 1rem;
-        border-radius: 12px;
-        font-weight: 600;
-        font-size: 0.875rem;
-        margin-bottom: 2rem;
-    }}
-
-    .status-verified {{
-        background: #dcfce7;
-        color: #166534;
-        border: 1px solid #bbf7d0;
-    }}
-
-    .status-pending {{
-        background: #fef3c7;
-        color: #92400e;
-        border: 1px solid #fde68a;
+        color: #65a30d;
+        font-size: 1rem;
+        margin-bottom: 1.5rem;
     }}
 
     .user-actions {{
@@ -391,132 +278,61 @@ st.markdown(
         background: white !important;
         color: #374151 !important;
         border: 2px solid #d1d5db !important;
-        border-radius: 12px !important;
-        padding: 0.875rem 1.25rem !important;
+        border-radius: 10px !important;
+        padding: 0.75rem 1rem !important;
         font-weight: 600 !important;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        font-size: 0.95rem !important;
+        transition: all 0.2s ease !important;
     }}
 
     .secondary-button:hover {{
         background: #f9fafb !important;
         border-color: #9ca3af !important;
         transform: translateY(-1px) !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
-    }}
-
-    /* Benefits Section */
-    .benefits-section {{
-        margin-top: 2rem;
-        padding-top: 2rem;
-        border-top: 1px solid #e5e7eb;
-    }}
-
-    .benefits-title {{
-        font-weight: 700;
-        color: #374151;
-        font-size: 1rem;
-        margin-bottom: 1rem;
-        text-align: center;
-    }}
-
-    .benefits-list {{
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }}
-
-    .benefit-item {{
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        padding: 0.75rem 0;
-        color: #4b5563;
-        font-size: 0.95rem;
-        font-weight: 500;
     }}
 
     /* Footer */
-    .auth-footer {{
+    .footer {{
         text-align: center;
+        color: #64748b;
+        font-size: 0.9rem;
         margin-top: 3rem;
         padding-top: 2rem;
         border-top: 1px solid #e5e7eb;
     }}
 
-    .footer-text {{
-        color: #64748b;
-        font-size: 0.875rem;
-        margin-bottom: 1rem;
-        font-weight: 500;
-    }}
-
     .footer-links {{
-        display: flex;
-        justify-content: center;
-        gap: 2rem;
-        flex-wrap: wrap;
+        margin-top: 1rem;
     }}
 
-    .footer-link {{
+    .footer-links a {{
         color: #fc3134;
         text-decoration: none;
-        font-weight: 600;
-        font-size: 0.875rem;
-        transition: all 0.2s ease;
-    }}
-
-    .footer-link:hover {{
-        color: #e02d30;
-        text-decoration: underline;
-    }}
-
-    /* Additional Elements */
-    .forgot-password {{
-        text-align: right;
-        margin-top: 0.5rem;
-    }}
-
-    .forgot-password a {{
-        color: #fc3134;
-        text-decoration: none;
-        font-size: 0.875rem;
+        margin: 0 1rem;
         font-weight: 500;
-        transition: color 0.2s ease;
     }}
 
-    .forgot-password a:hover {{
-        color: #e02d30;
+    .footer-links a:hover {{
         text-decoration: underline;
     }}
 
-    /* Responsive Design */
-    @media (max-width: 640px) {{
-        .auth-card {{
-            padding: 2.5rem 2rem;
-            margin: 1rem;
-            border-radius: 20px;
+    /* Responsive */
+    @media (max-width: 768px) {{
+        .main-container {{
+            margin: 1rem auto;
+            padding: 0 1rem;
         }}
         
-        .auth-title {{
-            font-size: 1.75rem;
+        .auth-card {{
+            padding: 2rem 1.5rem;
+        }}
+        
+        .brand-title {{
+            font-size: 2rem;
         }}
         
         .user-actions {{
             grid-template-columns: 1fr;
-            gap: 0.75rem;
         }}
-        
-        .footer-links {{
-            flex-direction: column;
-            gap: 1rem;
-        }}
-    }}
-
-    /* Loading States */
-    .loading {{
-        opacity: 0.7;
-        pointer-events: none;
     }}
     </style>
     """,
@@ -524,153 +340,142 @@ st.markdown(
 )
 
 # ===============================
-# USING YOUR EXISTING AUTH SETUP
+# SUPABASE & GOOGLE SHEETS SETUP
 # ===============================
 
-# Import your existing Supabase and Google Sheets setup
-try:
-    from supabase import create_client
-    import gspread
-    from google.oauth2.service_account import Credentials
-    
-    @st.cache_resource
-    def init_supabase():
-        """Initialize Supabase client using your existing setup"""
-        try:
-            url = st.secrets.get("SUPABASE_URL")
-            key = st.secrets.get("SUPABASE_ANON_KEY")
-            if not url or not key:
-                return None
-            return create_client(url, key)
-        except Exception as e:
-            st.error(f"Supabase initialization failed: {e}")
+@st.cache_resource
+def init_supabase():
+    """Initialize Supabase client"""
+    if not SUPABASE_AVAILABLE:
+        return None
+        
+    try:
+        url = st.secrets.get("SUPABASE_URL") or os.environ.get("SUPABASE_URL")
+        key = st.secrets.get("SUPABASE_ANON_KEY") or os.environ.get("SUPABASE_ANON_KEY")
+        if not url or not key:
+            st.warning("Supabase credentials not found. Authentication features will be limited.")
             return None
+        return create_client(url, key)
+    except Exception as e:
+        st.warning(f"Supabase initialization failed: {e}")
+        return None
 
-    @st.cache_resource
-    def init_sheets_client():
-        """Initialize Google Sheets client using your existing setup"""
-        try:
-            sa_info = dict(st.secrets["GOOGLE_SERVICE_ACCOUNT"])
-            scopes = [
-                "https://www.googleapis.com/auth/spreadsheets",
-                "https://www.googleapis.com/auth/drive",
-            ]
-            creds = Credentials.from_service_account_info(sa_info, scopes=scopes)
-            return gspread.authorize(creds)
-        except Exception as e:
-            st.error(f"Google Sheets initialization failed: {e}")
-            return None
+@st.cache_resource
+def init_sheets_client():
+    """Initialize Google Sheets client"""
+    if not SHEETS_AVAILABLE:
+        return None
+        
+    try:
+        sa_info = dict(st.secrets["GOOGLE_SERVICE_ACCOUNT"])
+        scopes = [
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive",
+        ]
+        creds = Credentials.from_service_account_info(sa_info, scopes=scopes)
+        return gspread.authorize(creds)
+    except Exception as e:
+        st.warning(f"Google Sheets initialization failed: {e}")
+        return None
 
-    @st.cache_resource
-    def open_sheet():
-        """Open the main Google Sheet using your existing setup"""
-        try:
-            gc = init_sheets_client()
-            if gc:
-                return gc.open_by_key(st.secrets["SHEET_ID"])
-            return None
-        except Exception as e:
-            st.error(f"Failed to open Google Sheet: {e}")
-            return None
+@st.cache_resource
+def open_sheet():
+    """Open the main Google Sheet"""
+    if not SHEETS_AVAILABLE:
+        return None
+        
+    try:
+        gc = init_sheets_client()
+        if gc:
+            return gc.open_by_key(st.secrets["SHEET_ID"])
+        return None
+    except Exception as e:
+        st.warning(f"Failed to open Google Sheet: {e}")
+        return None
 
-    def with_backoff(fn, tries: int = 4):
-        """Run fn() with exponential backoff on transient errors."""
-        for i in range(tries):
+def log_auth_event(event: str, user_data: dict, note: str = ""):
+    """Log authentication events to Google Sheets"""
+    if not SHEETS_AVAILABLE:
+        return
+        
+    try:
+        sh = open_sheet()
+        if not sh:
+            return
+        
+        # Try to get or create Auth_Events worksheet
+        try:
+            ws = sh.worksheet("Auth_Events")
+        except:
             try:
-                return fn()
-            except Exception as e:
-                if i == tries - 1:
-                    raise
-                time.sleep((2 ** i) + random.random())
-
-    def log_auth_event(event: str, user: dict, note: str = ""):
-        """Log authentication events using your existing setup"""
-        try:
-            sh = open_sheet()
-            if not sh:
+                ws = sh.add_worksheet("Auth_Events", rows=5000, cols=10)
+                ws.append_row(["timestamp", "event", "user_id", "email", "username", "note"])
+            except:
                 return
-            
-            try:
-                ws = sh.worksheet("Auth_Events")
-            except gspread.WorksheetNotFound:
-                ws = sh.add_worksheet(title="Auth_Events", rows=5000, cols=10)
-                ws.append_row(["ts","event","user_id","email","username","note"])
-            
-            with_backoff(lambda: ws.append_row([
-                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                event,
-                user.get("id"),
-                user.get("email"),
-                (user.get("user_metadata") or {}).get("username"),
-                note
-            ], value_input_option="USER_ENTERED"))
-        except Exception:
-            pass  # Silent fail for logging
+        
+        # Append the event
+        ws.append_row([
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            event,
+            user_data.get("id", ""),
+            user_data.get("email", ""),
+            user_data.get("user_metadata", {}).get("username", ""),
+            note
+        ], value_input_option="USER_ENTERED")
+    except Exception:
+        pass  # Silent fail for optional feature
 
-    def upsert_user_row(user: dict, payload: dict = None):
-        """Create or update user row using your existing setup"""
+def upsert_user_profile(user_data: dict):
+    """Create or update user profile in Google Sheets"""
+    if not SHEETS_AVAILABLE:
+        return
+        
+    try:
+        sh = open_sheet()
+        if not sh:
+            return
+        
+        # Try to get or create Users worksheet
         try:
-            sh = open_sheet()
-            if not sh:
-                return
-            
+            ws = sh.worksheet("Users")
+        except:
             try:
-                ws = sh.worksheet("Users")
-            except gspread.WorksheetNotFound:
-                ws = sh.add_worksheet(title="Users", rows=2000, cols=30)
+                ws = sh.add_worksheet("Users", rows=2000, cols=20)
                 ws.append_row([
-                    "user_id","email","username","created_at","last_login",
-                    "age","monthly_income","monthly_expenses","monthly_savings",
-                    "monthly_debt","total_investments","net_worth","emergency_fund",
-                    "last_FHI","consent_processing","consent_storage","consent_ai",
-                    "analytics_opt_in","consent_version","consent_ts"
+                    "user_id", "email", "username", "created_at", "last_login",
+                    "email_confirmed", "last_sign_in_at", "sign_in_count"
                 ])
+            except:
+                return
+        
+        user_id = user_data.get("id", "")
+        email = user_data.get("email", "")
+        username = user_data.get("user_metadata", {}).get("username", "")
+        
+        # Check if user already exists
+        try:
+            cell = ws.find(user_id)
+            # User exists, update last_login
+            row_num = cell.row
+            ws.update_cell(row_num, 5, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))  # last_login
+        except:
+            # New user, add row
+            try:
+                ws.append_row([
+                    user_id,
+                    email,
+                    username,
+                    user_data.get("created_at", datetime.now().isoformat()),
+                    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),  # last_login
+                    str(user_data.get("email_confirmed_at") is not None),
+                    user_data.get("last_sign_in_at", ""),
+                    1  # sign_in_count
+                ], value_input_option="USER_ENTERED")
+            except:
+                pass
             
-            user_id = user.get("id")
-            email = user.get("email") 
-            username = (user.get("user_metadata") or {}).get("username")
-            
-            # Try to find existing user
-            values = ws.get_all_values()
-            header = values[0] if values else []
-            rows = values[1:] if len(values) > 1 else []
-            
-            found_row_idx = None
-            if "user_id" in header:
-                uid_idx = header.index("user_id")
-                for i, row in enumerate(rows, start=2):
-                    if len(row) > uid_idx and row[uid_idx] == user_id:
-                        found_row_idx = i
-                        break
-            
-            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            if found_row_idx:
-                # Update existing user
-                if "last_login" in header:
-                    ws.update_cell(found_row_idx, header.index("last_login") + 1, now)
-            else:
-                # Create new user
-                base_data = {
-                    "user_id": user_id,
-                    "email": email,
-                    "username": username,
-                    "created_at": user.get("created_at", now),
-                    "last_login": now,
-                }
-                if payload:
-                    base_data.update(payload)
-                
-                row = [base_data.get(col, "") for col in header]
-                with_backoff(lambda: ws.append_row(row, value_input_option="USER_ENTERED"))
-                
-        except Exception:
-            pass  # Silent fail for logging
-
-    AUTH_AVAILABLE = True
-    
-except ImportError:
-    AUTH_AVAILABLE = False
-    st.warning("Authentication libraries not available. Please install supabase and gspread for full functionality.")
+    except Exception:
+        pass  # Silent fail for optional feature
 
 # ===============================
 # AUTHENTICATION STATE MANAGEMENT
@@ -686,11 +491,11 @@ def init_auth_state():
         st.session_state.auth_message_type = None
 
 def set_user_session(user, session=None):
-    """Set user session and identity for the rest of the app"""
+    """Set user session"""
     st.session_state.auth["user"] = user
     st.session_state.auth["session"] = session
     
-    # Set identity variables that your other pages expect
+    # Set user identity for the rest of the app
     st.session_state["auth_method"] = "email"
     st.session_state["user_id"] = user.get("id")
     st.session_state["email"] = user.get("email")
@@ -699,13 +504,12 @@ def set_user_session(user, session=None):
 
 def sign_out():
     """Sign out current user"""
-    if AUTH_AVAILABLE:
-        supabase = init_supabase()
-        if supabase:
-            try:
-                supabase.auth.sign_out()
-            except:
-                pass
+    supabase = init_supabase()
+    if supabase:
+        try:
+            supabase.auth.sign_out()
+        except:
+            pass  # Silent fail if already signed out
     
     # Clear session state
     st.session_state.auth = {"user": None, "session": None}
@@ -716,7 +520,7 @@ def sign_out():
     st.session_state.auth_message_type = "success"
 
 # ===============================
-# UI HELPER FUNCTIONS
+# UI COMPONENTS
 # ===============================
 
 def show_message():
@@ -751,10 +555,6 @@ def validate_password(password):
         return False, "Password must contain at least one number"
     return True, "Password is strong"
 
-# ===============================
-# UI COMPONENTS
-# ===============================
-
 def render_user_profile():
     """Render logged-in user profile"""
     user = st.session_state.auth["user"]
@@ -773,17 +573,17 @@ def render_user_profile():
     
     # Account status
     is_verified = user.get("email_confirmed_at") is not None
-    status_class = "status-verified" if is_verified else "status-pending"
     status_text = "✅ Email Verified" if is_verified else "⏳ Email Pending Verification"
+    status_color = "#166534" if is_verified else "#d97706"
     
-    st.markdown(f'<div class="user-status {status_class}">{status_text}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="color: {status_color}; font-weight: 600; margin-bottom: 1rem;">{status_text}</div>', unsafe_allow_html=True)
     
     # Member since
     created_at = user.get("created_at", "")
     if created_at:
         try:
             member_since = datetime.fromisoformat(created_at.replace('Z', '+00:00')).strftime('%B %Y')
-            st.markdown(f'<div style="color: #64748b; margin-bottom: 1rem; font-weight: 500;">Member since {member_since}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="color: #64748b; margin-bottom: 1.5rem;">Member since {member_since}</div>', unsafe_allow_html=True)
         except:
             pass
     
@@ -805,37 +605,26 @@ def render_user_profile():
 
 def render_signup_form():
     """Render signup form"""
-    if not AUTH_AVAILABLE:
-        st.error("Authentication libraries not available. Please install required packages.")
-        return
-        
     supabase = init_supabase()
     if not supabase:
-        st.error("Authentication service unavailable. Please check your Supabase configuration.")
+        st.error("Authentication service unavailable. Please check your configuration and try again later.")
+        st.info("💡 Make sure Supabase credentials are properly configured in your app settings.")
         return
     
     st.markdown('<div class="form-container">', unsafe_allow_html=True)
     
     with st.form("signup_form", clear_on_submit=False):
-        st.markdown('<div class="form-group">')
-        st.markdown('<label class="form-label">👤 Username</label>', unsafe_allow_html=True)
+        st.markdown('<span class="input-label">👤 Username</span>', unsafe_allow_html=True)
         username = st.text_input("", placeholder="Enter your display name", key="signup_username", label_visibility="collapsed")
-        st.markdown('</div>')
         
-        st.markdown('<div class="form-group">')
-        st.markdown('<label class="form-label">📧 Email Address</label>', unsafe_allow_html=True)
+        st.markdown('<span class="input-label">📧 Email Address</span>', unsafe_allow_html=True)
         email = st.text_input("", placeholder="Enter your email address", key="signup_email", label_visibility="collapsed")
-        st.markdown('</div>')
         
-        st.markdown('<div class="form-group">')
-        st.markdown('<label class="form-label">🔒 Password</label>', unsafe_allow_html=True)
+        st.markdown('<span class="input-label">🔒 Password</span>', unsafe_allow_html=True)
         password = st.text_input("", type="password", placeholder="Create a strong password", key="signup_password", label_visibility="collapsed")
-        st.markdown('</div>')
         
-        st.markdown('<div class="form-group">')
-        st.markdown('<label class="form-label">🔒 Confirm Password</label>', unsafe_allow_html=True)
+        st.markdown('<span class="input-label">🔒 Confirm Password</span>', unsafe_allow_html=True)
         confirm_password = st.text_input("", type="password", placeholder="Confirm your password", key="signup_confirm", label_visibility="collapsed")
-        st.markdown('</div>')
         
         # Terms acceptance
         terms_accepted = st.checkbox("I agree to the Terms of Service and Privacy Policy", key="terms_check")
@@ -889,9 +678,9 @@ def render_signup_form():
                     if response.user:
                         user_dict = response.user.model_dump() if hasattr(response.user, 'model_dump') else dict(response.user)
                         
-                        # Log using your existing setup
+                        # Log to Google Sheets
                         log_auth_event("signup", user_dict)
-                        upsert_user_row(user_dict, payload={})
+                        upsert_user_profile(user_dict)
                         
                         st.session_state.auth_message = f"Account created successfully! Please check your email to verify your account."
                         st.session_state.auth_message_type = "success"
@@ -914,33 +703,26 @@ def render_signup_form():
 
 def render_login_form():
     """Render login form"""
-    if not AUTH_AVAILABLE:
-        st.error("Authentication libraries not available. Please install required packages.")
-        return
-        
     supabase = init_supabase()
     if not supabase:
-        st.error("Authentication service unavailable. Please check your Supabase configuration.")
+        st.error("Authentication service unavailable. Please check your configuration and try again later.")
+        st.info("💡 Make sure Supabase credentials are properly configured in your app settings.")
         return
     
     st.markdown('<div class="form-container">', unsafe_allow_html=True)
     
     with st.form("login_form", clear_on_submit=False):
-        st.markdown('<div class="form-group">')
-        st.markdown('<label class="form-label">📧 Email Address</label>', unsafe_allow_html=True)
+        st.markdown('<span class="input-label">📧 Email Address</span>', unsafe_allow_html=True)
         email = st.text_input("", placeholder="Enter your email address", key="login_email", label_visibility="collapsed")
-        st.markdown('</div>')
         
-        st.markdown('<div class="form-group">')
-        st.markdown('<label class="form-label">🔒 Password</label>', unsafe_allow_html=True)
+        st.markdown('<span class="input-label">🔒 Password</span>', unsafe_allow_html=True)
         password = st.text_input("", type="password", placeholder="Enter your password", key="login_password", label_visibility="collapsed")
-        st.markdown('</div>')
         
         col1, col2 = st.columns([1, 1])
         with col1:
             remember_me = st.checkbox("Remember me")
         with col2:
-            st.markdown('<div class="forgot-password"><a href="#">Forgot password?</a></div>', unsafe_allow_html=True)
+            st.markdown('<div style="text-align: right; padding-top: 0.3rem;"><a href="#" style="color: #fc3134; text-decoration: none; font-size: 0.9rem;">Forgot password?</a></div>', unsafe_allow_html=True)
         
         st.markdown('<div class="auth-button">', unsafe_allow_html=True)
         submitted = st.form_submit_button("🚀 Sign In")
@@ -963,9 +745,9 @@ def render_login_form():
                         
                         set_user_session(user_dict, response.session)
                         
-                        # Log using your existing setup
+                        # Log to Google Sheets
                         log_auth_event("login", user_dict)
-                        upsert_user_row(user_dict, payload={})
+                        upsert_user_profile(user_dict)
                         
                         username = user_dict.get("user_metadata", {}).get("username", "User")
                         st.session_state.auth_message = f"Welcome back, {username}! 🎉"
@@ -994,9 +776,8 @@ def render_login_form():
 # Initialize state
 init_auth_state()
 
-# Main layout wrapper
-st.markdown('<div class="auth-layout">', unsafe_allow_html=True)
-st.markdown('<div class="auth-container">', unsafe_allow_html=True)
+# Main container
+st.markdown('<div class="main-container">', unsafe_allow_html=True)
 
 # Check if user is logged in
 if st.session_state.auth.get("user"):
@@ -1004,10 +785,9 @@ if st.session_state.auth.get("user"):
     st.markdown('<div class="auth-card">', unsafe_allow_html=True)
     
     st.markdown('''
-    <div class="auth-header">
-        <div class="auth-logo"></div>
-        <div class="auth-title">Welcome Back!</div>
-        <div class="auth-subtitle">Manage your Fynstra account and access your financial insights</div>
+    <div class="brand-header">
+        <div class="brand-title">Welcome Back!</div>
+        <div class="brand-subtitle">Manage your Fynstra account and access your financial insights</div>
     </div>
     ''', unsafe_allow_html=True)
     
@@ -1021,10 +801,9 @@ else:
     st.markdown('<div class="auth-card">', unsafe_allow_html=True)
     
     st.markdown('''
-    <div class="auth-header">
-        <div class="auth-logo"></div>
-        <div class="auth-title">Join Fynstra</div>
-        <div class="auth-subtitle">Your AI-powered financial companion for smarter money decisions</div>
+    <div class="brand-header">
+        <div class="brand-title">Join Fynstra</div>
+        <div class="brand-subtitle">Your AI-powered financial companion for smarter money decisions</div>
     </div>
     ''', unsafe_allow_html=True)
     
@@ -1040,32 +819,30 @@ else:
         render_signup_form()
         
         # Sign up benefits
-        st.markdown('''
-        <div class="benefits-section">
-            <div class="benefits-title">Why create an account?</div>
-            <div class="benefits-list">
-                <div class="benefit-item">💾 Save your financial calculations and scenarios</div>
-                <div class="benefit-item">📊 Track your progress over time</div>
-                <div class="benefit-item">🤖 Get personalized AI recommendations</div>
-                <div class="benefit-item">📱 Access from any device</div>
-                <div class="benefit-item">🔒 Secure data encryption</div>
-            </div>
-        </div>
-        ''', unsafe_allow_html=True)
+        st.markdown("---")
+        st.markdown("**Why create an account?**")
+        benefits = [
+            "💾 Save your financial calculations and scenarios",
+            "📊 Track your progress over time", 
+            "🤖 Get personalized AI recommendations",
+            "📱 Access from any device",
+            "🔒 Secure data encryption"
+        ]
+        for benefit in benefits:
+            st.markdown(f"• {benefit}")
     
     st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown('</div>', unsafe_allow_html=True)
-st.markdown('</div>', unsafe_allow_html=True)
 
-# Professional Footer
+# Footer
 st.markdown('''
-<div class="auth-footer">
-    <div class="footer-text">🛡️ Your data is secure and encrypted • Built with privacy in mind</div>
+<div class="footer">
+    <div>🛡️ Your data is secure and encrypted • Built with privacy in mind</div>
     <div class="footer-links">
-        <a href="#" class="footer-link">Privacy Policy</a>
-        <a href="#" class="footer-link">Terms of Service</a>
-        <a href="#" class="footer-link">Support</a>
+        <a href="#">Privacy Policy</a>
+        <a href="#">Terms of Service</a>
+        <a href="#">Support</a>
     </div>
 </div>
 ''', unsafe_allow_html=True)
