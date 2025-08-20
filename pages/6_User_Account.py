@@ -796,4 +796,62 @@ if st.session_state.auth.get("user"):
     st.markdown('''
     <div class="brand-header">
         <div class="brand-title">Welcome Back!</div>
-        <div class="brand-subtitle">Manage your
+        <div class="brand-subtitle">Manage your Fynstra account and access your financial insights</div>
+    </div>
+    ''', unsafe_allow_html=True)
+    
+    show_message()
+    render_user_profile()
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+else:
+    # User is not logged in - show auth forms
+    st.markdown('<div class="auth-card">', unsafe_allow_html=True)
+    
+    st.markdown('''
+    <div class="brand-header">
+        <div class="brand-title">Join Fynstra</div>
+        <div class="brand-subtitle">Your AI-powered financial companion for smarter money decisions</div>
+    </div>
+    ''', unsafe_allow_html=True)
+    
+    show_message()
+    
+    # Tab-based interface
+    tab1, tab2 = st.tabs(["🔐 Sign In", "🎯 Create Account"])
+    
+    with tab1:
+        render_login_form()
+    
+    with tab2:
+        render_signup_form()
+        
+        # Sign up benefits
+        st.markdown("---")
+        st.markdown("**Why create an account?**")
+        benefits = [
+            "💾 Save your financial calculations and scenarios",
+            "📊 Track your progress over time", 
+            "🤖 Get personalized AI recommendations",
+            "📱 Access from any device",
+            "🔒 Secure data encryption"
+        ]
+        for benefit in benefits:
+            st.markdown(f"• {benefit}")
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+
+st.markdown('</div>', unsafe_allow_html=True)
+
+# Footer
+st.markdown('''
+<div class="footer">
+    <div>🛡️ Your data is secure and encrypted • Built with privacy in mind</div>
+    <div class="footer-links">
+        <a href="#">Privacy Policy</a>
+        <a href="#">Terms of Service</a>
+        <a href="#">Support</a>
+    </div>
+</div>
+''', unsafe_allow_html=True)
