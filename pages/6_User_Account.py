@@ -36,7 +36,7 @@ with st.sidebar:
         unsafe_allow_html=True
     )
 
-# --- CSS for sidebar background with gradient overlay ---
+# --- Professional Authentication Page Styling ---
 st.markdown(
     f"""
     <style>
@@ -46,94 +46,191 @@ st.markdown(
         background-size: cover;
     }}
 
-    /* Make all sidebar text white */
     [data-testid="stSidebar"] * {{
         color: white;
     }}
 
-    /* Clean modern layout */
-    .main-container {{
-        max-width: 450px;
-        margin: 3rem auto;
-        padding: 0 1rem;
+    /* Global Layout */
+    .main {{
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        min-height: 100vh;
+    }}
+
+    .auth-layout {{
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 90vh;
+        padding: 2rem 1rem;
+    }}
+
+    .auth-container {{
+        width: 100%;
+        max-width: 480px;
+        margin: 0 auto;
     }}
 
     .auth-card {{
-        background: white;
-        border-radius: 20px;
-        padding: 3rem 2.5rem;
-        box-shadow: 0 20px 40px rgba(0,0,0,0.08);
-        border: 1px solid #f1f5f9;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 24px;
+        padding: 3.5rem 3rem;
+        box-shadow: 
+            0 32px 64px rgba(0, 0, 0, 0.08),
+            0 16px 32px rgba(0, 0, 0, 0.04),
+            inset 0 1px 0 rgba(255, 255, 255, 0.4);
+        position: relative;
+        overflow: hidden;
+    }}
+
+    .auth-card::before {{
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #fc3134, #ff5f1f, #ffc542);
+        border-radius: 24px 24px 0 0;
+    }}
+
+    /* Header Section */
+    .auth-header {{
         text-align: center;
-    }}
-
-    .brand-header {{
         margin-bottom: 3rem;
+        position: relative;
     }}
 
-    .brand-title {{
-        font-size: 2.5rem;
+    .auth-logo {{
+        width: 64px;
+        height: 64px;
+        background: linear-gradient(135deg, #fc3134, #ffc542);
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.5rem auto;
+        box-shadow: 0 8px 24px rgba(252, 49, 52, 0.2);
+        position: relative;
+    }}
+
+    .auth-logo::after {{
+        content: '⌧';
+        color: white;
+        font-size: 2rem;
+        font-weight: 700;
+    }}
+
+    .auth-title {{
+        font-size: 2rem;
         font-weight: 800;
         background: linear-gradient(135deg, #fc3134, #ff5f1f, #ffc542);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         margin-bottom: 0.75rem;
-        line-height: 1.2;
+        line-height: 1.3;
+        letter-spacing: -0.02em;
     }}
 
-    .brand-subtitle {{
+    .auth-subtitle {{
         color: #64748b;
-        font-size: 1.1rem;
+        font-size: 1rem;
         font-weight: 400;
-        line-height: 1.5;
+        line-height: 1.6;
+        max-width: 300px;
+        margin: 0 auto;
     }}
 
-    .tab-container {{
-        margin: 2rem 0;
+    /* Tab Styling */
+    .stTabs [data-baseweb="tab-list"] {{
+        gap: 0;
+        background: #f1f5f9;
+        border-radius: 16px;
+        padding: 6px;
+        margin-bottom: 2rem;
+        border: 1px solid #e2e8f0;
     }}
 
-    /* Form styling */
+    .stTabs [data-baseweb="tab"] {{
+        border-radius: 12px !important;
+        color: #64748b !important;
+        font-weight: 600 !important;
+        padding: 1rem 1.5rem !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        border: none !important;
+        font-size: 0.95rem !important;
+    }}
+
+    .stTabs [aria-selected="true"] {{
+        background: white !important;
+        color: #fc3134 !important;
+        box-shadow: 
+            0 2px 8px rgba(0, 0, 0, 0.08),
+            0 1px 4px rgba(0, 0, 0, 0.04) !important;
+        transform: translateY(-1px) !important;
+    }}
+
+    /* Form Styling */
     .form-container {{
-        padding: 2rem 0;
-        text-align: left;
+        margin-top: 1.5rem;
     }}
 
-    .form-section {{
-        margin-bottom: 1.5rem;
+    .form-group {{
+        margin-bottom: 1.75rem;
+        position: relative;
     }}
 
-    .input-label {{
+    .form-label {{
+        display: block;
         font-weight: 600;
         color: #374151;
-        font-size: 0.9rem;
-        margin-bottom: 0.5rem;
-        display: block;
+        font-size: 0.875rem;
+        margin-bottom: 0.75rem;
+        letter-spacing: 0.01em;
     }}
 
-    /* Streamlit input overrides */
+    /* Enhanced Input Styling */
     .stTextInput > div > div > input {{
-        border-radius: 12px !important;
+        border-radius: 16px !important;
         border: 2px solid #e5e7eb !important;
-        padding: 1rem !important;
+        padding: 1.25rem 1rem !important;
         font-size: 1rem !important;
-        transition: all 0.2s ease !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
         background: #fafbfc !important;
+        font-weight: 500 !important;
+        color: #1f2937 !important;
     }}
 
     .stTextInput > div > div > input:focus {{
         border-color: #fc3134 !important;
-        box-shadow: 0 0 0 4px rgba(252, 49, 52, 0.1) !important;
+        box-shadow: 
+            0 0 0 4px rgba(252, 49, 52, 0.1),
+            0 4px 12px rgba(252, 49, 52, 0.15) !important;
         background: white !important;
+        transform: translateY(-1px) !important;
+    }}
+
+    .stTextInput > div > div > input::placeholder {{
+        color: #9ca3af !important;
+        font-weight: 400 !important;
+    }}
+
+    /* Checkbox Styling */
+    .stCheckbox {{
+        margin: 1.5rem 0 !important;
     }}
 
     .stCheckbox > label {{
         font-size: 0.9rem !important;
         color: #4b5563 !important;
+        font-weight: 500 !important;
+        line-height: 1.5 !important;
     }}
 
-    /* Button styling */
+    /* Button Styling */
     .auth-button {{
-        margin: 1.5rem 0 1rem 0;
+        margin: 2rem 0 1.5rem 0;
     }}
 
     .stButton > button {{
@@ -141,117 +238,146 @@ st.markdown(
         background: linear-gradient(135deg, #fc3134, #ff5f1f) !important;
         color: white !important;
         border: none !important;
-        border-radius: 12px !important;
-        padding: 1rem 2rem !important;
-        font-weight: 600 !important;
-        font-size: 1.1rem !important;
-        transition: all 0.3s ease !important;
-        letter-spacing: 0.5px !important;
+        border-radius: 16px !important;
+        padding: 1.25rem 2rem !important;
+        font-weight: 700 !important;
+        font-size: 1rem !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        letter-spacing: 0.025em !important;
+        box-shadow: 0 4px 12px rgba(252, 49, 52, 0.3) !important;
+        position: relative !important;
+        overflow: hidden !important;
     }}
 
     .stButton > button:hover {{
         transform: translateY(-2px) !important;
-        box-shadow: 0 8px 25px rgba(252, 49, 52, 0.3) !important;
+        box-shadow: 0 8px 24px rgba(252, 49, 52, 0.4) !important;
         background: linear-gradient(135deg, #e02d30, #ff5f1f) !important;
     }}
 
     .stButton > button:active {{
         transform: translateY(0) !important;
+        transition: transform 0.1s !important;
     }}
 
-    /* Tab styling */
-    .stTabs [data-baseweb="tab-list"] {{
-        gap: 0;
-        background: #f8fafc;
-        border-radius: 12px;
-        padding: 0.25rem;
-    }}
-
-    .stTabs [data-baseweb="tab"] {{
-        border-radius: 10px !important;
-        color: #64748b !important;
-        font-weight: 600 !important;
-        padding: 0.75rem 1.5rem !important;
-        transition: all 0.2s ease !important;
-    }}
-
-    .stTabs [aria-selected="true"] {{
-        background: white !important;
-        color: #fc3134 !important;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
-    }}
-
-    /* Message styling */
+    /* Message Styling */
     .success-msg {{
-        background: linear-gradient(135deg, #dcfce7, #bbf7d0);
-        border: 1px solid #86efac;
-        color: #166534;
-        padding: 1rem;
-        border-radius: 12px;
-        margin: 1rem 0;
-        font-weight: 500;
+        background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+        border: 1px solid #a7f3d0;
+        color: #065f46;
+        padding: 1.25rem;
+        border-radius: 16px;
+        margin: 1.5rem 0;
+        font-weight: 600;
         text-align: center;
+        font-size: 0.95rem;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
     }}
 
     .error-msg {{
-        background: linear-gradient(135deg, #fef2f2, #fecaca);
-        border: 1px solid #f87171;
+        background: linear-gradient(135deg, #fef2f2, #fee2e2);
+        border: 1px solid #fca5a5;
         color: #dc2626;
-        padding: 1rem;
-        border-radius: 12px;
-        margin: 1rem 0;
-        font-weight: 500;
+        padding: 1.25rem;
+        border-radius: 16px;
+        margin: 1.5rem 0;
+        font-weight: 600;
         text-align: center;
+        font-size: 0.95rem;
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1);
     }}
 
     .info-msg {{
         background: linear-gradient(135deg, #eff6ff, #dbeafe);
         border: 1px solid #93c5fd;
         color: #1d4ed8;
-        padding: 1rem;
-        border-radius: 12px;
-        margin: 1rem 0;
-        font-weight: 500;
+        padding: 1.25rem;
+        border-radius: 16px;
+        margin: 1.5rem 0;
+        font-weight: 600;
         text-align: center;
+        font-size: 0.95rem;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
     }}
 
-    /* User profile styling */
+    /* User Profile Styling */
     .user-profile {{
         background: linear-gradient(135deg, #f0fdf4, #dcfce7);
         border: 2px solid #bbf7d0;
-        border-radius: 20px;
-        padding: 2rem;
+        border-radius: 24px;
+        padding: 2.5rem;
         margin: 2rem 0;
         text-align: center;
+        position: relative;
+        overflow: hidden;
+    }}
+
+    .user-profile::before {{
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #10b981, #34d399);
+        border-radius: 24px 24px 0 0;
     }}
 
     .user-avatar {{
-        width: 80px;
-        height: 80px;
+        width: 96px;
+        height: 96px;
         background: linear-gradient(135deg, #fc3134, #ffc542);
-        border-radius: 50%;
+        border-radius: 24px;
         display: flex;
         align-items: center;
         justify-content: center;
         color: white;
-        font-weight: bold;
-        font-size: 2rem;
-        margin: 0 auto 1.5rem auto;
+        font-weight: 800;
+        font-size: 2.5rem;
+        margin: 0 auto 2rem auto;
         border: 4px solid white;
-        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        box-shadow: 
+            0 8px 24px rgba(0, 0, 0, 0.1),
+            0 2px 8px rgba(0, 0, 0, 0.06);
+        position: relative;
     }}
 
     .user-name {{
-        font-size: 1.5rem;
-        font-weight: 700;
+        font-size: 1.75rem;
+        font-weight: 800;
         color: #166534;
         margin-bottom: 0.5rem;
+        letter-spacing: -0.01em;
     }}
 
     .user-email {{
-        color: #65a30d;
-        font-size: 1rem;
-        margin-bottom: 1.5rem;
+        color: #059669;
+        font-size: 1.1rem;
+        font-weight: 500;
+        margin-bottom: 1rem;
+    }}
+
+    .user-status {{
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        margin-bottom: 2rem;
+    }}
+
+    .status-verified {{
+        background: #dcfce7;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+    }}
+
+    .status-pending {{
+        background: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fde68a;
     }}
 
     .user-actions {{
@@ -265,61 +391,132 @@ st.markdown(
         background: white !important;
         color: #374151 !important;
         border: 2px solid #d1d5db !important;
-        border-radius: 10px !important;
-        padding: 0.75rem 1rem !important;
+        border-radius: 12px !important;
+        padding: 0.875rem 1.25rem !important;
         font-weight: 600 !important;
-        transition: all 0.2s ease !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        font-size: 0.95rem !important;
     }}
 
     .secondary-button:hover {{
         background: #f9fafb !important;
         border-color: #9ca3af !important;
         transform: translateY(-1px) !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+    }}
+
+    /* Benefits Section */
+    .benefits-section {{
+        margin-top: 2rem;
+        padding-top: 2rem;
+        border-top: 1px solid #e5e7eb;
+    }}
+
+    .benefits-title {{
+        font-weight: 700;
+        color: #374151;
+        font-size: 1rem;
+        margin-bottom: 1rem;
+        text-align: center;
+    }}
+
+    .benefits-list {{
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }}
+
+    .benefit-item {{
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 0;
+        color: #4b5563;
+        font-size: 0.95rem;
+        font-weight: 500;
     }}
 
     /* Footer */
-    .footer {{
+    .auth-footer {{
         text-align: center;
-        color: #64748b;
-        font-size: 0.9rem;
         margin-top: 3rem;
         padding-top: 2rem;
         border-top: 1px solid #e5e7eb;
     }}
 
-    .footer-links {{
-        margin-top: 1rem;
-    }}
-
-    .footer-links a {{
-        color: #fc3134;
-        text-decoration: none;
-        margin: 0 1rem;
+    .footer-text {{
+        color: #64748b;
+        font-size: 0.875rem;
+        margin-bottom: 1rem;
         font-weight: 500;
     }}
 
-    .footer-links a:hover {{
+    .footer-links {{
+        display: flex;
+        justify-content: center;
+        gap: 2rem;
+        flex-wrap: wrap;
+    }}
+
+    .footer-link {{
+        color: #fc3134;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.875rem;
+        transition: all 0.2s ease;
+    }}
+
+    .footer-link:hover {{
+        color: #e02d30;
         text-decoration: underline;
     }}
 
-    /* Responsive */
-    @media (max-width: 768px) {{
-        .main-container {{
-            margin: 1rem auto;
-            padding: 0 1rem;
-        }}
-        
+    /* Additional Elements */
+    .forgot-password {{
+        text-align: right;
+        margin-top: 0.5rem;
+    }}
+
+    .forgot-password a {{
+        color: #fc3134;
+        text-decoration: none;
+        font-size: 0.875rem;
+        font-weight: 500;
+        transition: color 0.2s ease;
+    }}
+
+    .forgot-password a:hover {{
+        color: #e02d30;
+        text-decoration: underline;
+    }}
+
+    /* Responsive Design */
+    @media (max-width: 640px) {{
         .auth-card {{
-            padding: 2rem 1.5rem;
+            padding: 2.5rem 2rem;
+            margin: 1rem;
+            border-radius: 20px;
         }}
         
-        .brand-title {{
-            font-size: 2rem;
+        .auth-title {{
+            font-size: 1.75rem;
         }}
         
         .user-actions {{
             grid-template-columns: 1fr;
+            gap: 0.75rem;
         }}
+        
+        .footer-links {{
+            flex-direction: column;
+            gap: 1rem;
+        }}
+    }}
+
+    /* Loading States */
+    .loading {{
+        opacity: 0.7;
+        pointer-events: none;
     }}
     </style>
     """,
@@ -576,17 +773,17 @@ def render_user_profile():
     
     # Account status
     is_verified = user.get("email_confirmed_at") is not None
+    status_class = "status-verified" if is_verified else "status-pending"
     status_text = "✅ Email Verified" if is_verified else "⏳ Email Pending Verification"
-    status_color = "#166534" if is_verified else "#d97706"
     
-    st.markdown(f'<div style="color: {status_color}; font-weight: 600; margin-bottom: 1rem;">{status_text}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="user-status {status_class}">{status_text}</div>', unsafe_allow_html=True)
     
     # Member since
     created_at = user.get("created_at", "")
     if created_at:
         try:
             member_since = datetime.fromisoformat(created_at.replace('Z', '+00:00')).strftime('%B %Y')
-            st.markdown(f'<div style="color: #64748b; margin-bottom: 1.5rem;">Member since {member_since}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="color: #64748b; margin-bottom: 1rem; font-weight: 500;">Member since {member_since}</div>', unsafe_allow_html=True)
         except:
             pass
     
@@ -620,17 +817,25 @@ def render_signup_form():
     st.markdown('<div class="form-container">', unsafe_allow_html=True)
     
     with st.form("signup_form", clear_on_submit=False):
-        st.markdown('<span class="input-label">👤 Username</span>', unsafe_allow_html=True)
+        st.markdown('<div class="form-group">')
+        st.markdown('<label class="form-label">👤 Username</label>', unsafe_allow_html=True)
         username = st.text_input("", placeholder="Enter your display name", key="signup_username", label_visibility="collapsed")
+        st.markdown('</div>')
         
-        st.markdown('<span class="input-label">📧 Email Address</span>', unsafe_allow_html=True)
+        st.markdown('<div class="form-group">')
+        st.markdown('<label class="form-label">📧 Email Address</label>', unsafe_allow_html=True)
         email = st.text_input("", placeholder="Enter your email address", key="signup_email", label_visibility="collapsed")
+        st.markdown('</div>')
         
-        st.markdown('<span class="input-label">🔒 Password</span>', unsafe_allow_html=True)
+        st.markdown('<div class="form-group">')
+        st.markdown('<label class="form-label">🔒 Password</label>', unsafe_allow_html=True)
         password = st.text_input("", type="password", placeholder="Create a strong password", key="signup_password", label_visibility="collapsed")
+        st.markdown('</div>')
         
-        st.markdown('<span class="input-label">🔒 Confirm Password</span>', unsafe_allow_html=True)
+        st.markdown('<div class="form-group">')
+        st.markdown('<label class="form-label">🔒 Confirm Password</label>', unsafe_allow_html=True)
         confirm_password = st.text_input("", type="password", placeholder="Confirm your password", key="signup_confirm", label_visibility="collapsed")
+        st.markdown('</div>')
         
         # Terms acceptance
         terms_accepted = st.checkbox("I agree to the Terms of Service and Privacy Policy", key="terms_check")
@@ -721,17 +926,21 @@ def render_login_form():
     st.markdown('<div class="form-container">', unsafe_allow_html=True)
     
     with st.form("login_form", clear_on_submit=False):
-        st.markdown('<span class="input-label">📧 Email Address</span>', unsafe_allow_html=True)
+        st.markdown('<div class="form-group">')
+        st.markdown('<label class="form-label">📧 Email Address</label>', unsafe_allow_html=True)
         email = st.text_input("", placeholder="Enter your email address", key="login_email", label_visibility="collapsed")
+        st.markdown('</div>')
         
-        st.markdown('<span class="input-label">🔒 Password</span>', unsafe_allow_html=True)
+        st.markdown('<div class="form-group">')
+        st.markdown('<label class="form-label">🔒 Password</label>', unsafe_allow_html=True)
         password = st.text_input("", type="password", placeholder="Enter your password", key="login_password", label_visibility="collapsed")
+        st.markdown('</div>')
         
         col1, col2 = st.columns([1, 1])
         with col1:
             remember_me = st.checkbox("Remember me")
         with col2:
-            st.markdown('<div style="text-align: right; padding-top: 0.3rem;"><a href="#" style="color: #fc3134; text-decoration: none; font-size: 0.9rem;">Forgot password?</a></div>', unsafe_allow_html=True)
+            st.markdown('<div class="forgot-password"><a href="#">Forgot password?</a></div>', unsafe_allow_html=True)
         
         st.markdown('<div class="auth-button">', unsafe_allow_html=True)
         submitted = st.form_submit_button("🚀 Sign In")
@@ -785,8 +994,9 @@ def render_login_form():
 # Initialize state
 init_auth_state()
 
-# Main container
-st.markdown('<div class="main-container">', unsafe_allow_html=True)
+# Main layout wrapper
+st.markdown('<div class="auth-layout">', unsafe_allow_html=True)
+st.markdown('<div class="auth-container">', unsafe_allow_html=True)
 
 # Check if user is logged in
 if st.session_state.auth.get("user"):
@@ -794,9 +1004,10 @@ if st.session_state.auth.get("user"):
     st.markdown('<div class="auth-card">', unsafe_allow_html=True)
     
     st.markdown('''
-    <div class="brand-header">
-        <div class="brand-title">Welcome Back!</div>
-        <div class="brand-subtitle">Manage your Fynstra account and access your financial insights</div>
+    <div class="auth-header">
+        <div class="auth-logo"></div>
+        <div class="auth-title">Welcome Back!</div>
+        <div class="auth-subtitle">Manage your Fynstra account and access your financial insights</div>
     </div>
     ''', unsafe_allow_html=True)
     
@@ -810,9 +1021,10 @@ else:
     st.markdown('<div class="auth-card">', unsafe_allow_html=True)
     
     st.markdown('''
-    <div class="brand-header">
-        <div class="brand-title">Join Fynstra</div>
-        <div class="brand-subtitle">Your AI-powered financial companion for smarter money decisions</div>
+    <div class="auth-header">
+        <div class="auth-logo"></div>
+        <div class="auth-title">Join Fynstra</div>
+        <div class="auth-subtitle">Your AI-powered financial companion for smarter money decisions</div>
     </div>
     ''', unsafe_allow_html=True)
     
@@ -828,30 +1040,32 @@ else:
         render_signup_form()
         
         # Sign up benefits
-        st.markdown("---")
-        st.markdown("**Why create an account?**")
-        benefits = [
-            "💾 Save your financial calculations and scenarios",
-            "📊 Track your progress over time", 
-            "🤖 Get personalized AI recommendations",
-            "📱 Access from any device",
-            "🔒 Secure data encryption"
-        ]
-        for benefit in benefits:
-            st.markdown(f"• {benefit}")
+        st.markdown('''
+        <div class="benefits-section">
+            <div class="benefits-title">Why create an account?</div>
+            <div class="benefits-list">
+                <div class="benefit-item">💾 Save your financial calculations and scenarios</div>
+                <div class="benefit-item">📊 Track your progress over time</div>
+                <div class="benefit-item">🤖 Get personalized AI recommendations</div>
+                <div class="benefit-item">📱 Access from any device</div>
+                <div class="benefit-item">🔒 Secure data encryption</div>
+            </div>
+        </div>
+        ''', unsafe_allow_html=True)
     
     st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown('</div>', unsafe_allow_html=True)
+st.markdown('</div>', unsafe_allow_html=True)
 
-# Footer
+# Professional Footer
 st.markdown('''
-<div class="footer">
-    <div>🛡️ Your data is secure and encrypted • Built with privacy in mind</div>
+<div class="auth-footer">
+    <div class="footer-text">🛡️ Your data is secure and encrypted • Built with privacy in mind</div>
     <div class="footer-links">
-        <a href="#">Privacy Policy</a>
-        <a href="#">Terms of Service</a>
-        <a href="#">Support</a>
+        <a href="#" class="footer-link">Privacy Policy</a>
+        <a href="#" class="footer-link">Terms of Service</a>
+        <a href="#" class="footer-link">Support</a>
     </div>
 </div>
 ''', unsafe_allow_html=True)
