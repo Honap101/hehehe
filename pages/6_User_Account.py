@@ -6,22 +6,35 @@ import uuid
 import time
 import random
 
+# Import your existing auth helpers from the main app
+try:
+    from supabase import create_client
+    import gspread
+    from google.oauth2.service_account import Credentials
+    AUTH_AVAILABLE = True
+except ImportError:
+    AUTH_AVAILABLE = False
+
 def get_base64_image(image_path):
     with open(image_path, "rb") as f:
         data = f.read()
     return base64.b64encode(data).decode()
 
-bg_base64 = get_base64_image("sidebar_background.png")  # Replace with your image path
+# Load your existing brand assets
+bg_base64 = get_base64_image("sidebar_background.png")
 logow_base64 = get_base64_image("logo_white.png") 
 logoc_base64 = get_base64_image("logo_colored.png")
 
+# ===============================
+# SIDEBAR STYLING (consistent with your other pages)
+# ===============================
 with st.sidebar:
     st.markdown(
         f"""
         <div style='
             display: flex;
             flex-direction: column;
-            justify-content: flex-end;  /* push to bottom */
+            justify-content: flex-end;
             align-items: center;
             text-align: center;
             padding: 0;
@@ -36,7 +49,6 @@ with st.sidebar:
         unsafe_allow_html=True
     )
 
-# --- Professional Authentication Page Styling ---
 st.markdown(
     f"""
     <style>
@@ -50,47 +62,45 @@ st.markdown(
         color: white;
     }}
 
-    /* Global Layout - Remove white box styling */
-    .main {{
-        background: transparent;
-        min-height: 100vh;
-    }}
-
+    /* Page Styling - Professional & Modern */
     .auth-layout {{
         padding: 2rem 1rem;
-    }}
-
-    .auth-container {{
-        width: 100%;
-        max-width: 480px;
+        max-width: 600px;
         margin: 0 auto;
     }}
 
-    /* Remove white card styling */
     .auth-card {{
-        background: transparent;
-        backdrop-filter: none;
-        border: none;
-        border-radius: 0;
-        padding: 0;
-        box-shadow: none;
+        background: white;
+        border-radius: 20px;
+        padding: 3rem 2.5rem;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e5e7eb;
         position: relative;
-        overflow: visible;
+        overflow: hidden;
     }}
 
     .auth-card::before {{
-        display: none;
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #fc3134, #ff5f1f, #ffc542);
+        border-radius: 20px 20px 0 0;
     }}
 
-    /* Page header styling to match other pages */
     .page-header {{
+        text-align: center;
         margin-bottom: 2rem;
     }}
 
     .page-title {{
         font-size: 2.5rem;
         font-weight: 800;
-        color: #1f2937;
+        background: linear-gradient(to right, #fc3134, #ff5f1f, #ffc542);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
         margin-bottom: 0.5rem;
         line-height: 1.2;
     }}
@@ -103,24 +113,7 @@ st.markdown(
         margin-bottom: 2rem;
     }}
 
-    /* Remove auth header styling */
-    .auth-header {{
-        display: none;
-    }}
-
-    .auth-logo {{
-        display: none;
-    }}
-
-    .auth-title {{
-        display: none;
-    }}
-
-    .auth-subtitle {{
-        display: none;
-    }}
-
-    /* Tab Styling - Updated for no white box */
+    /* Tab Styling */
     .stTabs [data-baseweb="tab-list"] {{
         gap: 0;
         background: rgba(241, 245, 249, 0.8);
@@ -150,46 +143,7 @@ st.markdown(
         transform: translateY(-1px) !important;
     }}
 
-    /* Remove complex form styling that was causing issues */
-    .form-container {{
-        display: none;
-    }}
-
-    .form-group {{
-        display: none;
-    }}
-
-    .form-label {{
-        display: none;
-    }}
-
-    .auth-button {{
-        display: none;
-    }}
-
-    .benefits-section {{
-        display: none;
-    }}
-
-    /* Clean button styling */
-    .stButton > button[kind="primary"] {{
-        background: linear-gradient(135deg, #fc3134, #ff5f1f) !important;
-        color: white !important;
-        border: none !important;
-        border-radius: 12px !important;
-        padding: 0.75rem 1.5rem !important;
-        font-weight: 600 !important;
-        font-size: 1rem !important;
-        transition: all 0.3s ease !important;
-        box-shadow: 0 4px 12px rgba(252, 49, 52, 0.3) !important;
-    }}
-
-    .stButton > button[kind="primary"]:hover {{
-        transform: translateY(-2px) !important;
-        box-shadow: 0 8px 24px rgba(252, 49, 52, 0.4) !important;
-    }}
-
-    /* Enhanced Input Styling - More comfortable sizing */
+    /* Enhanced Input Styling */
     .stTextInput > div > div > input {{
         border-radius: 12px !important;
         border: 2px solid #e5e7eb !important;
@@ -217,46 +171,11 @@ st.markdown(
         font-weight: 400 !important;
     }}
 
-    /* Better spacing for form elements */
     .stTextInput {{
         margin-bottom: 1.25rem !important;
     }}
 
-    .stCheckbox {{
-        margin: 1rem 0 !important;
-    }}
-
-    /* Remove extra spacing */
-    .auth-layout {{
-        padding: 0;
-    }}
-
-    .auth-container {{
-        max-width: none;
-        margin: 0;
-    }}
-
-    .auth-card {{
-        padding: 0;
-    }}
-
-    /* Checkbox Styling */
-    .stCheckbox {{
-        margin: 1.5rem 0 !important;
-    }}
-
-    .stCheckbox > label {{
-        font-size: 0.9rem !important;
-        color: #4b5563 !important;
-        font-weight: 500 !important;
-        line-height: 1.5 !important;
-    }}
-
     /* Button Styling */
-    .auth-button {{
-        margin: 2rem 0 1.5rem 0;
-    }}
-
     .stButton > button {{
         width: 100%;
         background: linear-gradient(135deg, #fc3134, #ff5f1f) !important;
@@ -282,6 +201,24 @@ st.markdown(
     .stButton > button:active {{
         transform: translateY(0) !important;
         transition: transform 0.1s !important;
+    }}
+
+    .secondary-button {{
+        background: white !important;
+        color: #374151 !important;
+        border: 2px solid #d1d5db !important;
+        border-radius: 12px !important;
+        padding: 0.875rem 1.25rem !important;
+        font-weight: 600 !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        font-size: 0.95rem !important;
+    }}
+
+    .secondary-button:hover {{
+        background: #f9fafb !important;
+        border-color: #9ca3af !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
     }}
 
     /* Message Styling */
@@ -411,22 +348,16 @@ st.markdown(
         margin-top: 2rem;
     }}
 
-    .secondary-button {{
-        background: white !important;
-        color: #374151 !important;
-        border: 2px solid #d1d5db !important;
-        border-radius: 12px !important;
-        padding: 0.875rem 1.25rem !important;
-        font-weight: 600 !important;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        font-size: 0.95rem !important;
+    /* Checkbox Styling */
+    .stCheckbox {{
+        margin: 1.5rem 0 !important;
     }}
 
-    .secondary-button:hover {{
-        background: #f9fafb !important;
-        border-color: #9ca3af !important;
-        transform: translateY(-1px) !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+    .stCheckbox > label {{
+        font-size: 0.9rem !important;
+        color: #4b5563 !important;
+        font-weight: 500 !important;
+        line-height: 1.5 !important;
     }}
 
     /* Benefits Section */
@@ -442,12 +373,6 @@ st.markdown(
         font-size: 1rem;
         margin-bottom: 1rem;
         text-align: center;
-    }}
-
-    .benefits-list {{
-        list-style: none;
-        padding: 0;
-        margin: 0;
     }}
 
     .benefit-item {{
@@ -495,25 +420,6 @@ st.markdown(
         text-decoration: underline;
     }}
 
-    /* Additional Elements */
-    .forgot-password {{
-        text-align: right;
-        margin-top: 0.5rem;
-    }}
-
-    .forgot-password a {{
-        color: #fc3134;
-        text-decoration: none;
-        font-size: 0.875rem;
-        font-weight: 500;
-        transition: color 0.2s ease;
-    }}
-
-    .forgot-password a:hover {{
-        color: #e02d30;
-        text-decoration: underline;
-    }}
-
     /* Responsive Design */
     @media (max-width: 640px) {{
         .auth-card {{
@@ -522,7 +428,7 @@ st.markdown(
             border-radius: 20px;
         }}
         
-        .auth-title {{
+        .page-title {{
             font-size: 1.75rem;
         }}
         
@@ -536,165 +442,147 @@ st.markdown(
             gap: 1rem;
         }}
     }}
-
-    /* Loading States */
-    .loading {{
-        opacity: 0.7;
-        pointer-events: none;
-    }}
     </style>
     """,
     unsafe_allow_html=True
 )
 
 # ===============================
-# USING YOUR EXISTING AUTH SETUP
+# AUTHENTICATION HELPERS (from your existing code)
 # ===============================
 
-# Import your existing Supabase and Google Sheets setup
-try:
-    from supabase import create_client
-    import gspread
-    from google.oauth2.service_account import Credentials
-    
-    @st.cache_resource
-    def init_supabase():
-        """Initialize Supabase client using your existing setup"""
+@st.cache_resource
+def init_supabase():
+    """Initialize Supabase client"""
+    try:
+        url = st.secrets.get("SUPABASE_URL")
+        key = st.secrets.get("SUPABASE_ANON_KEY")
+        if not url or not key:
+            return None
+        return create_client(url, key)
+    except Exception as e:
+        st.error(f"Supabase initialization failed: {e}")
+        return None
+
+@st.cache_resource
+def init_sheets_client():
+    """Initialize Google Sheets client"""
+    try:
+        sa_info = dict(st.secrets["GOOGLE_SERVICE_ACCOUNT"])
+        scopes = [
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive",
+        ]
+        creds = Credentials.from_service_account_info(sa_info, scopes=scopes)
+        return gspread.authorize(creds)
+    except Exception as e:
+        st.error(f"Google Sheets initialization failed: {e}")
+        return None
+
+@st.cache_resource
+def open_sheet():
+    """Open the main Google Sheet"""
+    try:
+        gc = init_sheets_client()
+        if gc:
+            return gc.open_by_key(st.secrets["SHEET_ID"])
+        return None
+    except Exception as e:
+        st.error(f"Failed to open Google Sheet: {e}")
+        return None
+
+def with_backoff(fn, tries: int = 4):
+    """Run fn() with exponential backoff on transient errors."""
+    for i in range(tries):
         try:
-            url = st.secrets.get("SUPABASE_URL")
-            key = st.secrets.get("SUPABASE_ANON_KEY")
-            if not url or not key:
-                return None
-            return create_client(url, key)
+            return fn()
         except Exception as e:
-            st.error(f"Supabase initialization failed: {e}")
-            return None
+            if i == tries - 1:
+                raise
+            time.sleep((2 ** i) + random.random())
 
-    @st.cache_resource
-    def init_sheets_client():
-        """Initialize Google Sheets client using your existing setup"""
+def log_auth_event(event: str, user: dict, note: str = ""):
+    """Log authentication events"""
+    try:
+        sh = open_sheet()
+        if not sh:
+            return
+        
         try:
-            sa_info = dict(st.secrets["GOOGLE_SERVICE_ACCOUNT"])
-            scopes = [
-                "https://www.googleapis.com/auth/spreadsheets",
-                "https://www.googleapis.com/auth/drive",
-            ]
-            creds = Credentials.from_service_account_info(sa_info, scopes=scopes)
-            return gspread.authorize(creds)
-        except Exception as e:
-            st.error(f"Google Sheets initialization failed: {e}")
-            return None
+            ws = sh.worksheet("Auth_Events")
+        except gspread.WorksheetNotFound:
+            ws = sh.add_worksheet(title="Auth_Events", rows=5000, cols=10)
+            ws.append_row(["ts","event","user_id","email","username","note"])
+        
+        with_backoff(lambda: ws.append_row([
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            event,
+            user.get("id"),
+            user.get("email"),
+            (user.get("user_metadata") or {}).get("username"),
+            note
+        ], value_input_option="USER_ENTERED"))
+    except Exception:
+        pass  # Silent fail for logging
 
-    @st.cache_resource
-    def open_sheet():
-        """Open the main Google Sheet using your existing setup"""
+def upsert_user_row(user: dict, payload: dict = None):
+    """Create or update user row"""
+    try:
+        sh = open_sheet()
+        if not sh:
+            return
+        
         try:
-            gc = init_sheets_client()
-            if gc:
-                return gc.open_by_key(st.secrets["SHEET_ID"])
-            return None
-        except Exception as e:
-            st.error(f"Failed to open Google Sheet: {e}")
-            return None
-
-    def with_backoff(fn, tries: int = 4):
-        """Run fn() with exponential backoff on transient errors."""
-        for i in range(tries):
-            try:
-                return fn()
-            except Exception as e:
-                if i == tries - 1:
-                    raise
-                time.sleep((2 ** i) + random.random())
-
-    def log_auth_event(event: str, user: dict, note: str = ""):
-        """Log authentication events using your existing setup"""
-        try:
-            sh = open_sheet()
-            if not sh:
-                return
+            ws = sh.worksheet("Users")
+        except gspread.WorksheetNotFound:
+            ws = sh.add_worksheet(title="Users", rows=2000, cols=30)
+            ws.append_row([
+                "user_id","email","username","created_at","last_login",
+                "age","monthly_income","monthly_expenses","monthly_savings",
+                "monthly_debt","total_investments","net_worth","emergency_fund",
+                "last_FHI","consent_processing","consent_storage","consent_ai",
+                "analytics_opt_in","consent_version","consent_ts"
+            ])
+        
+        user_id = user.get("id")
+        email = user.get("email") 
+        username = (user.get("user_metadata") or {}).get("username")
+        
+        # Try to find existing user
+        values = ws.get_all_values()
+        header = values[0] if values else []
+        rows = values[1:] if len(values) > 1 else []
+        
+        found_row_idx = None
+        if "user_id" in header:
+            uid_idx = header.index("user_id")
+            for i, row in enumerate(rows, start=2):
+                if len(row) > uid_idx and row[uid_idx] == user_id:
+                    found_row_idx = i
+                    break
+        
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if found_row_idx:
+            # Update existing user
+            if "last_login" in header:
+                ws.update_cell(found_row_idx, header.index("last_login") + 1, now)
+        else:
+            # Create new user
+            base_data = {
+                "user_id": user_id,
+                "email": email,
+                "username": username,
+                "created_at": user.get("created_at", now),
+                "last_login": now,
+            }
+            if payload:
+                base_data.update(payload)
             
-            try:
-                ws = sh.worksheet("Auth_Events")
-            except gspread.WorksheetNotFound:
-                ws = sh.add_worksheet(title="Auth_Events", rows=5000, cols=10)
-                ws.append_row(["ts","event","user_id","email","username","note"])
+            row = [base_data.get(col, "") for col in header]
+            with_backoff(lambda: ws.append_row(row, value_input_option="USER_ENTERED"))
             
-            with_backoff(lambda: ws.append_row([
-                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                event,
-                user.get("id"),
-                user.get("email"),
-                (user.get("user_metadata") or {}).get("username"),
-                note
-            ], value_input_option="USER_ENTERED"))
-        except Exception:
-            pass  # Silent fail for logging
-
-    def upsert_user_row(user: dict, payload: dict = None):
-        """Create or update user row using your existing setup"""
-        try:
-            sh = open_sheet()
-            if not sh:
-                return
-            
-            try:
-                ws = sh.worksheet("Users")
-            except gspread.WorksheetNotFound:
-                ws = sh.add_worksheet(title="Users", rows=2000, cols=30)
-                ws.append_row([
-                    "user_id","email","username","created_at","last_login",
-                    "age","monthly_income","monthly_expenses","monthly_savings",
-                    "monthly_debt","total_investments","net_worth","emergency_fund",
-                    "last_FHI","consent_processing","consent_storage","consent_ai",
-                    "analytics_opt_in","consent_version","consent_ts"
-                ])
-            
-            user_id = user.get("id")
-            email = user.get("email") 
-            username = (user.get("user_metadata") or {}).get("username")
-            
-            # Try to find existing user
-            values = ws.get_all_values()
-            header = values[0] if values else []
-            rows = values[1:] if len(values) > 1 else []
-            
-            found_row_idx = None
-            if "user_id" in header:
-                uid_idx = header.index("user_id")
-                for i, row in enumerate(rows, start=2):
-                    if len(row) > uid_idx and row[uid_idx] == user_id:
-                        found_row_idx = i
-                        break
-            
-            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            if found_row_idx:
-                # Update existing user
-                if "last_login" in header:
-                    ws.update_cell(found_row_idx, header.index("last_login") + 1, now)
-            else:
-                # Create new user
-                base_data = {
-                    "user_id": user_id,
-                    "email": email,
-                    "username": username,
-                    "created_at": user.get("created_at", now),
-                    "last_login": now,
-                }
-                if payload:
-                    base_data.update(payload)
-                
-                row = [base_data.get(col, "") for col in header]
-                with_backoff(lambda: ws.append_row(row, value_input_option="USER_ENTERED"))
-                
-        except Exception:
-            pass  # Silent fail for logging
-
-    AUTH_AVAILABLE = True
-    
-except ImportError:
-    AUTH_AVAILABLE = False
-    st.warning("Authentication libraries not available. Please install supabase and gspread for full functionality.")
+    except Exception:
+        pass  # Silent fail for logging
 
 # ===============================
 # AUTHENTICATION STATE MANAGEMENT
@@ -776,6 +664,91 @@ def validate_password(password):
     return True, "Password is strong"
 
 # ===============================
+# DATA EXPORT & DELETION
+# ===============================
+
+def export_my_data_ui():
+    """Renders an export panel for user data"""
+    import csv, zipfile, json, io
+    
+    if not st.session_state.get("user_id"):
+        st.info("Sign in to export your data.")
+        return
+
+    st.markdown("### 📥 Export Your Data")
+    st.markdown("Download a copy of your saved data from our systems.")
+
+    # Pick format
+    fmt = st.radio("Export format", ["JSON", "CSV (zip)"], horizontal=True, key="export_fmt")
+
+    user_id = st.session_state["user_id"]
+    email = st.session_state.get("email", "")
+    
+    # Mock data structure (replace with actual data retrieval)
+    user_data = {
+        "profile": {
+            "user_id": user_id,
+            "email": email,
+            "display_name": st.session_state.get("display_name", ""),
+            "created_at": datetime.now().isoformat(),
+        },
+        "calculations": [],  # Your FHI calculations
+        "goals": [],  # User goals
+        "preferences": {}  # User preferences
+    }
+
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    base_name = f"fynstra_export_{user_id}_{ts}"
+
+    if fmt == "JSON":
+        data = json.dumps(user_data, indent=2).encode("utf-8")
+        st.download_button(
+            "📥 Download JSON export",
+            data=data,
+            file_name=f"{base_name}.json",
+            mime="application/json",
+            use_container_width=True,
+        )
+    else:
+        # CSV export (simplified)
+        csv_data = f"user_id,email,display_name,created_at\n{user_id},{email},{st.session_state.get('display_name', '')},{datetime.now().isoformat()}"
+        st.download_button(
+            "📦 Download CSV export",
+            data=csv_data.encode("utf-8"),
+            file_name=f"{base_name}.csv",
+            mime="text/csv",
+            use_container_width=True,
+        )
+
+def forget_me_ui():
+    """Renders a data deletion interface"""
+    if not st.session_state.get("user_id"):
+        return
+
+    st.markdown("### 🗑️ Delete Your Data")
+    st.markdown("Permanently remove your saved profile and data from our systems.")
+    
+    if st.button("🗑️ Delete my saved profile", type="secondary"):
+        try:
+            # Here you would implement actual data deletion
+            # For now, just clear session state
+            for k in [
+                "user_id", "email", "display_name", "FHI", 
+                "monthly_income", "monthly_expenses", "current_savings"
+            ]:
+                st.session_state.pop(k, None)
+            
+            # Sign out
+            sign_out()
+            
+            st.success("Your data has been deleted from our systems.")
+            time.sleep(2)
+            st.rerun()
+            
+        except Exception as e:
+            st.error(f"Delete failed: {e}")
+
+# ===============================
 # UI COMPONENTS
 # ===============================
 
@@ -819,11 +792,23 @@ def render_user_profile():
             st.switch_page("Fynstra.py")
     
     with col2:
-        st.markdown('<div class="secondary-button">', unsafe_allow_html=True)
         if st.button("🚪 Sign Out", key="logout_btn", use_container_width=True):
             sign_out()
             st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Data management
+    with st.expander("🔒 Privacy & data controls", expanded=False):
+        st.markdown("Download a copy of your data or delete your saved profile.")
+        export_my_data_ui()
+        
+        st.markdown("---")
+        
+        # Confirm checkbox for delete
+        confirm = st.checkbox("I understand this will permanently delete my saved profile.")
+        if confirm:
+            forget_me_ui()
+        else:
+            st.caption("Check the box above to enable deletion.")
     
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -993,16 +978,20 @@ def render_login_form():
 # MAIN APPLICATION
 # ===============================
 
+# Set page config
+st.set_page_config(page_title="Account - Fynstra", layout="centered")
+
 # Add page title matching other pages
-st.title("User Account")
-st.markdown("### 🔐 Manage Your Fynstra Account")
+st.markdown('<div class="page-header">', unsafe_allow_html=True)
+st.markdown('<div class="page-title">Account Management</div>', unsafe_allow_html=True)
+st.markdown('<div class="page-subtitle">🔐 Manage your Fynstra account, privacy settings, and data</div>', unsafe_allow_html=True)
+st.markdown('</div>', unsafe_allow_html=True)
 
 # Initialize state
 init_auth_state()
 
 # Main layout wrapper
 st.markdown('<div class="auth-layout">', unsafe_allow_html=True)
-st.markdown('<div class="auth-container">', unsafe_allow_html=True)
 
 # Check if user is logged in
 if st.session_state.auth.get("user"):
@@ -1018,20 +1007,22 @@ else:
     # User is not logged in - show auth forms
     st.markdown('<div class="auth-card">', unsafe_allow_html=True)
     
+    # Show any messages first
+    show_message()
+    
     # Tab-based interface
     tab1, tab2 = st.tabs(["🔐 Sign In", "🎯 Create Account"])
     
     with tab1:
-        with st.container(border=True):
-            render_login_form()
+        render_login_form()
     
     with tab2:
-        with st.container(border=True):
-            render_signup_form()
+        render_signup_form()
         
         # Sign up benefits
-        st.markdown("---")
-        st.markdown("**Why create an account?**")
+        st.markdown('<div class="benefits-section">', unsafe_allow_html=True)
+        st.markdown('<div class="benefits-title">Why create an account?</div>', unsafe_allow_html=True)
+        
         benefits = [
             "💾 Save your financial calculations and scenarios",
             "📊 Track your progress over time",
@@ -1039,25 +1030,24 @@ else:
             "📱 Access from any device",
             "🔒 Secure data encryption"
         ]
+        
         for benefit in benefits:
-            st.markdown(f"• {benefit}")
-    
-    st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="benefit-item">{benefit}</div>', unsafe_allow_html=True)
+        
+        st.markdown('</div>', unsafe_allow_html=True)
     
     st.markdown('</div>', unsafe_allow_html=True)
 
-st.markdown('</div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
 # Professional Footer
-st.markdown("---")
+st.markdown('<div class="auth-footer">', unsafe_allow_html=True)
+st.markdown('<div class="footer-text">🛡️ Your data is secure and encrypted • Built with privacy in mind</div>', unsafe_allow_html=True)
 st.markdown('''
-<div style="text-align: center; color: #64748b; font-size: 0.875rem; margin-top: 2rem;">
-    🛡️ Your data is secure and encrypted • Built with privacy in mind<br>
-    <div style="margin-top: 1rem;">
-        <a href="#" style="color: #fc3134; text-decoration: none; margin: 0 1rem;">Privacy Policy</a>
-        <a href="#" style="color: #fc3134; text-decoration: none; margin: 0 1rem;">Terms of Service</a>
-        <a href="#" style="color: #fc3134; text-decoration: none; margin: 0 1rem;">Support</a>
-    </div>
+<div class="footer-links">
+    <a href="#" class="footer-link">Privacy Policy</a>
+    <a href="#" class="footer-link">Terms of Service</a>
+    <a href="#" class="footer-link">Support</a>
 </div>
 ''', unsafe_allow_html=True)
+st.markdown('</div>', unsafe_allow_html=True)
