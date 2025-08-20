@@ -189,16 +189,18 @@ st.markdown(
         box-shadow: 0 8px 24px rgba(252, 49, 52, 0.4) !important;
     }}
 
-    /* Enhanced Input Styling */
+    /* Enhanced Input Styling - More comfortable sizing */
     .stTextInput > div > div > input {{
-        border-radius: 16px !important;
+        border-radius: 12px !important;
         border: 2px solid #e5e7eb !important;
-        padding: 1.25rem 1rem !important;
+        padding: 1rem 1.25rem !important;
         font-size: 1rem !important;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
         background: #fafbfc !important;
         font-weight: 500 !important;
         color: #1f2937 !important;
+        min-height: 48px !important;
+        line-height: 1.5 !important;
     }}
 
     .stTextInput > div > div > input:focus {{
@@ -213,6 +215,29 @@ st.markdown(
     .stTextInput > div > div > input::placeholder {{
         color: #9ca3af !important;
         font-weight: 400 !important;
+    }}
+
+    /* Better spacing for form elements */
+    .stTextInput {{
+        margin-bottom: 1.25rem !important;
+    }}
+
+    .stCheckbox {{
+        margin: 1rem 0 !important;
+    }}
+
+    /* Remove extra spacing */
+    .auth-layout {{
+        padding: 0;
+    }}
+
+    .auth-container {{
+        max-width: none;
+        margin: 0;
+    }}
+
+    .auth-card {{
+        padding: 0;
     }}
 
     /* Checkbox Styling */
@@ -1025,13 +1050,14 @@ st.markdown('</div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
 # Professional Footer
+st.markdown("---")
 st.markdown('''
-<div class="auth-footer">
-    <div class="footer-text">🛡️ Your data is secure and encrypted • Built with privacy in mind</div>
-    <div class="footer-links">
-        <a href="#" class="footer-link">Privacy Policy</a>
-        <a href="#" class="footer-link">Terms of Service</a>
-        <a href="#" class="footer-link">Support</a>
+<div style="text-align: center; color: #64748b; font-size: 0.875rem; margin-top: 2rem;">
+    🛡️ Your data is secure and encrypted • Built with privacy in mind<br>
+    <div style="margin-top: 1rem;">
+        <a href="#" style="color: #fc3134; text-decoration: none; margin: 0 1rem;">Privacy Policy</a>
+        <a href="#" style="color: #fc3134; text-decoration: none; margin: 0 1rem;">Terms of Service</a>
+        <a href="#" style="color: #fc3134; text-decoration: none; margin: 0 1rem;">Support</a>
     </div>
 </div>
 ''', unsafe_allow_html=True)
