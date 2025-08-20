@@ -1065,10 +1065,11 @@ else:
 st.markdown('</div>', unsafe_allow_html=True)
 
 # ===============================
-# FOOTER (minimal rectangular white buttons)
+# FOOTER (uniform pill-style buttons)
 # ===============================
 st.markdown("""
 <style>
+/* Footer wrapper */
 .auth-footer{
   text-align:center;
   margin-top:3rem;
@@ -1076,34 +1077,39 @@ st.markdown("""
   border-top:1px solid #e5e7eb;
 }
 
+/* Consistent "link button" look for footer buttons */
+.footer-buttons .stButton>button{
+  width:100%;
+  border-radius:9999px !important;           /* full pill */
+  background:#ffffff !important;
+  color:#374151 !important;
+  border:1.5px solid #d1d5db !important;
+  font-weight:700 !important;
+  font-size:0.95rem !important;
+  padding:0.85rem 1.25rem !important;
+  box-shadow:0 1px 2px rgba(0,0,0,0.04) !important;
+  transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease !important;
+}
+
+/* Hover/active to match a subtle link-button feel */
+.footer-buttons .stButton>button:hover{
+  transform:translateY(-1px);
+  box-shadow:0 6px 14px rgba(0,0,0,0.08) !important;
+  border-color:#9ca3af !important;
+  background:#ffffff !important;
+}
+
+.footer-buttons .stButton>button:active{
+  transform:translateY(0);
+  box-shadow:0 3px 8px rgba(0,0,0,0.06) !important;
+}
+
+/* Optional: keep footer helper text style */
 .footer-text{
   color:#64748b;
   font-size:0.875rem;
   margin-bottom:1rem;
   font-weight:500;
-}
-
-/* Minimal rectangular buttons */
-.footer-buttons .stButton>button{
-  display:inline-block;
-  background:#ffffff !important;
-  color:#374151 !important;
-  border:1px solid #d1d5db !important;
-  border-radius:0 !important;      
-  font-weight:600 !important;
-  font-size:0.8rem !important;
-  padding:0.3rem 0.7rem !important;
-  width:auto !important;
-  min-width:0 !important;
-  box-shadow:none !important;
-  transition:none !important; 
-}
-
-/* Hover = subtle color change only */
-.footer-buttons .stButton>button:hover{
-  background:#f3f4f6 !important; 
-  border-color:#9ca3af !important;
-  color:#111827 !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -1111,22 +1117,29 @@ st.markdown("""
 st.markdown('<div class="auth-footer">', unsafe_allow_html=True)
 st.markdown('<div class="footer-text">🛡️ Your data is secure and encrypted • Built with privacy in mind</div>', unsafe_allow_html=True)
 
-# Inline row of buttons
-st.markdown('<div class="footer-buttons" style="display:flex;justify-content:center;gap:1rem;">', unsafe_allow_html=True)
-
-if st.button("Privacy Policy", key="btn_privacy_box"):
-    show_privacy()
-
-if st.button("Terms of Service", key="btn_terms_box"):
-    show_terms()
-
-if st.button("Support", key="btn_support_box"):
-    st.markdown(
-        """
-        <script>window.location.href = "mailto:support@fynstra.app";</script>
-        """,
-        unsafe_allow_html=True
-    )
+# Uniform pill buttons (3 columns)
+col1, col2, col3 = st.columns(3)
+with st.container():
+    st.markdown('<div class="footer-buttons">', unsafe_allow_html=True)
+    with col1:
+        if st.button("Privacy Policy", key="btn_privacy_pill", use_container_width=True):
+            show_privacy()
+    with col2:
+        if st.button("Terms of Service", key="btn_terms_pill", use_container_width=True):
+            show_terms()
+    with col3:
+        # Styled like the others, but opens mail client
+        if st.button("Support", key="btn_support_pill", use_container_width=True):
+            # Trigger a client-side mailto without navigating away
+            st.markdown(
+                """
+                <script>
+                window.location.href = "mailto:support@fynstra.app";
+                </script>
+                """,
+                unsafe_allow_html=True
+            )
+    st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown('</div>', unsafe_allow_html=True)
-st.markdown('</div>', unsafe_allow_html=True)
+
