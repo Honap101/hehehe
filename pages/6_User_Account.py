@@ -1054,13 +1054,41 @@ st.markdown('</div>', unsafe_allow_html=True)
 st.markdown('<div class="auth-footer">', unsafe_allow_html=True)
 st.markdown('<div class="footer-text">🛡️ Your data is secure and encrypted • Built with privacy in mind</div>', unsafe_allow_html=True)
 col1, col2, col3 = st.columns(3)
+# CSS to make st.button look like a link
+st.markdown("""
+    <style>
+    div.footer-link-button > button {
+        background: none !important;
+        color: #fc3134 !important;
+        text-decoration: underline;
+        border: none !important;
+        padding: 0 !important;
+        font-size: 0.875rem !important;
+        font-weight: 600 !important;
+        box-shadow: none !important;
+    }
+    div.footer-link-button > button:hover {
+        color: #e02d30 !important;
+        text-decoration: underline;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+col1, col2, col3 = st.columns(3)
 with col1:
-    if st.button("Privacy Policy", use_container_width=True):
-        show_privacy_policy()
+    with st.container():
+        if st.button("Privacy Policy", key="privacy_btn"):
+            show_privacy_policy()
+        st.markdown('<div class="footer-link-button"></div>', unsafe_allow_html=True)
+
 with col2:
-    if st.button("Terms of Service", use_container_width=True):
-        show_terms_of_service()
+    with st.container():
+        if st.button("Terms of Service", key="terms_btn"):
+            show_terms_of_service()
+        st.markdown('<div class="footer-link-button"></div>', unsafe_allow_html=True)
+
 with col3:
     st.markdown('<a href="mailto:support@fynstra.ai" class="footer-link">Support</a>', unsafe_allow_html=True)
+
 
 st.markdown('</div>', unsafe_allow_html=True)
