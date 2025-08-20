@@ -6,6 +6,15 @@ import uuid
 import time
 import random
 
+# Import your existing auth helpers from the main app
+try:
+    from supabase import create_client
+    import gspread
+    from google.oauth2.service_account import Credentials
+    AUTH_AVAILABLE = True
+except ImportError:
+    AUTH_AVAILABLE = False
+
 def get_base64_image(image_path):
     with open(image_path, "rb") as f:
         data = f.read()
