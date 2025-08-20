@@ -931,6 +931,65 @@ def render_login_form():
                     st.rerun()
 
 # ===============================
+# TERMS & PRIVACY PAGES
+# ===============================
+
+def show_privacy_policy():
+    st.title("🔒 Privacy Policy")
+    st.markdown("""
+    ### 1. Data Collection
+    We collect only the information you provide when creating an account and saving your financial data.  
+    This includes your email, username, and any financial inputs you choose to store.
+
+    ### 2. Data Usage
+    - Your data is used only for powering Fynstra AI’s financial calculations, recommendations, and scenario planning.  
+    - We do **not** sell or share your personal data with third parties.  
+    - Aggregated, anonymized usage data may be used to improve our platform.
+
+    ### 3. Data Storage & Security
+    - All data is stored securely in encrypted databases (Supabase + Google Sheets).  
+    - We employ industry-standard security practices, including SSL encryption.  
+    - You may export or delete your data at any time from your account settings.
+
+    ### 4. User Rights
+    - **Export**: You can download your saved data.  
+    - **Deletion**: You can permanently delete your account and all associated data.  
+    - **Consent**: By using this platform, you consent to this Privacy Policy.
+
+    ### 5. Updates
+    This Privacy Policy may be updated periodically. You will be notified of any significant changes.
+    """)
+
+def show_terms_of_service():
+    st.title("📜 Terms of Service")
+    st.markdown("""
+    ### 1. Acceptance of Terms
+    By creating an account and using Fynstra AI, you agree to these Terms of Service.
+
+    ### 2. Use of Service
+    - Fynstra AI is designed for **personal financial planning and scenario testing**.  
+    - You agree not to misuse the service for unlawful or fraudulent activities.  
+    - We reserve the right to suspend or terminate accounts that violate these terms.
+
+    ### 3. Accounts
+    - You are responsible for keeping your login credentials secure.  
+    - You may not share or transfer your account without prior consent.  
+    - You must provide accurate information during signup.
+
+    ### 4. Disclaimer
+    - Fynstra AI provides financial insights but is **not professional financial advice**.  
+    - You are solely responsible for any financial decisions you make based on insights provided.  
+
+    ### 5. Limitation of Liability
+    - We are not liable for financial losses, damages, or decisions made based on use of the platform.  
+    - The service is provided “as is” without warranties of any kind.
+
+    ### 6. Changes
+    - We may update these Terms at any time.  
+    - Continued use of the platform constitutes acceptance of updated terms.
+    """)
+
+# ===============================
 # MAIN APPLICATION
 # ===============================
 
@@ -994,11 +1053,14 @@ st.markdown('</div>', unsafe_allow_html=True)
 # Professional Footer
 st.markdown('<div class="auth-footer">', unsafe_allow_html=True)
 st.markdown('<div class="footer-text">🛡️ Your data is secure and encrypted • Built with privacy in mind</div>', unsafe_allow_html=True)
-st.markdown('''
-<div class="footer-links">
-    <a href="#" class="footer-link">Privacy Policy</a>
-    <a href="#" class="footer-link">Terms of Service</a>
-    <a href="#" class="footer-link">Support</a>
-</div>
-''', unsafe_allow_html=True)
+col1, col2, col3 = st.columns(3)
+with col1:
+    if st.button("Privacy Policy", use_container_width=True):
+        show_privacy_policy()
+with col2:
+    if st.button("Terms of Service", use_container_width=True):
+        show_terms_of_service()
+with col3:
+    st.markdown('<a href="mailto:support@fynstra.ai" class="footer-link">Support</a>', unsafe_allow_html=True)
+
 st.markdown('</div>', unsafe_allow_html=True)
