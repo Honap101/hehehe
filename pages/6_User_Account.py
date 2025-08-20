@@ -400,28 +400,6 @@ st.markdown(
     }}
     </style>
 
-    <style>
-    /* Make all footer buttons look like the outlined Support button */
-    .auth-footer .stButton > button,
-    .auth-footer .stLinkButton > a {
-        background: white !important;
-        color: #374151 !important;
-        border: 2px solid #d1d5db !important;
-        border-radius: 12px !important;
-        padding: 0.75rem 1.25rem !important;
-        font-weight: 600 !important;
-        font-size: 0.95rem !important;
-        transition: all 0.2s ease !important;
-        box-shadow: none !important;
-    }
-    
-    .auth-footer .stButton > button:hover,
-    .auth-footer .stLinkButton > a:hover {
-        background: #f9fafb !important;
-        border-color: #9ca3af !important;
-        color: #111827 !important;
-    }
-    </style>
     """,
     unsafe_allow_html=True
 )
