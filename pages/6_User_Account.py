@@ -189,20 +189,18 @@ st.markdown(
         box-shadow: 0 8px 24px rgba(252, 49, 52, 0.4) !important;
     }}
 
-    /* Enhanced Input Styling - Much more comfortable sizing */
+    /* Enhanced Input Styling - More comfortable sizing */
     .stTextInput > div > div > input {{
         border-radius: 12px !important;
         border: 2px solid #e5e7eb !important;
-        padding: 1.25rem 1.5rem !important;
-        font-size: 1.05rem !important;
+        padding: 1rem 1.25rem !important;
+        font-size: 1rem !important;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
         background: #fafbfc !important;
         font-weight: 500 !important;
         color: #1f2937 !important;
-        min-height: 56px !important;
-        line-height: 1.6 !important;
-        width: 100% !important;
-        box-sizing: border-box !important;
+        min-height: 48px !important;
+        line-height: 1.5 !important;
     }}
 
     .stTextInput > div > div > input:focus {{
@@ -217,31 +215,29 @@ st.markdown(
     .stTextInput > div > div > input::placeholder {{
         color: #9ca3af !important;
         font-weight: 400 !important;
-        font-size: 1rem !important;
     }}
 
     /* Better spacing for form elements */
     .stTextInput {{
-        margin-bottom: 1rem !important;
+        margin-bottom: 1.25rem !important;
     }}
 
     .stCheckbox {{
         margin: 1rem 0 !important;
     }}
 
-    /* Reduce spacing between tabs and content */
-    .stTabs [data-baseweb="tab-list"] {{
-        margin-bottom: 1rem !important;
+    /* Remove extra spacing */
+    .auth-layout {{
+        padding: 0;
     }}
 
-    /* Remove excessive margins */
-    .block-container {{
-        padding-top: 1rem !important;
+    .auth-container {{
+        max-width: none;
+        margin: 0;
     }}
 
-    /* Improve container spacing */
-    div[data-testid="stVerticalBlock"] > div[style*="flex-direction: column"] > div {{
-        gap: 0.75rem !important;
+    .auth-card {{
+        padding: 0;
     }}
 
     /* Checkbox Styling */
