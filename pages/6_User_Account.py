@@ -936,7 +936,7 @@ def render_login_form():
 
 # Page title & subtitle
 st.title("User Account")
-st.markdown("### 🔐 Manage your account, privacy settings, and saved data")
+st.markdown("### Manage your account and saved data")
 
 # Initialize state
 init_auth_state()
