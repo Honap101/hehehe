@@ -78,7 +78,8 @@ st.markdown(
         font-size: 2.5rem;
         font-weight: 800;
         background: linear-gradient(to right, #fc3134, #ff5f1f, #ffc542);
-        color: black; 
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
         margin-bottom: 0.5rem;
         line-height: 1.2;
     }}
@@ -956,14 +957,9 @@ def render_login_form():
 # MAIN APPLICATION
 # ===============================
 
-# Set page config
-st.set_page_config(page_title="Account - Fynstra", layout="centered")
-
-# Add page title matching other pages
-st.markdown('<div class="page-header">', unsafe_allow_html=True)
-st.markdown('<div class="page-title">Account Management</div>', unsafe_allow_html=True)
-st.markdown('<div class="page-subtitle">🔐 Manage your Fynstra account, privacy settings, and data</div>', unsafe_allow_html=True)
-st.markdown('</div>', unsafe_allow_html=True)
+# Page title & subtitle
+st.title("User Account")
+st.markdown("### 🔐 Manage your account, privacy settings, and saved data")
 
 # Initialize state
 init_auth_state()
