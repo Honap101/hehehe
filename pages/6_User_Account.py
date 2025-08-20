@@ -69,27 +69,6 @@ st.markdown(
         margin: 0 auto;
     }}
 
-    .auth-card {{
-        background: white;
-        border-radius: 20px;
-        padding: 3rem 2.5rem;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-        border: 1px solid #e5e7eb;
-        position: relative;
-        overflow: hidden;
-    }}
-
-    .auth-card::before {{
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 4px;
-        background: linear-gradient(90deg, #fc3134, #ff5f1f, #ffc542);
-        border-radius: 20px 20px 0 0;
-    }}
-
     .page-header {{
         text-align: center;
         margin-bottom: 2rem;
