@@ -476,9 +476,7 @@ if st.session_state.auth_user:
     st.markdown('</div>', unsafe_allow_html=True)
     
 else:
-    # User is not logged in - show auth forms
-    st.markdown('<div class="auth-container">', unsafe_allow_html=True)
-    
+    # User is not logged in - show auth forms    
     st.markdown('''
     <div class="auth-header">
         <div class="auth-title">Join Fynstra</div>
