@@ -312,7 +312,7 @@ with st.container(border=True):
         )
     
     with col3:
-        st.markdown("**Investments & Emergency Fund**")
+        st.markdown("**Investments & Emergency**")
         invest_pct = st.slider(
             "Investment Growth (%)", 
             -30, 50, 
