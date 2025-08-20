@@ -155,8 +155,6 @@ def create_comparison_chart(base_comp, new_comp):
 # ===============================
 # MAIN APPLICATION
 # ===============================
-
-st.title("What-if Sandbox")
 st.markdown("### 🧪 Test Financial Scenarios")
 
 # Check if user has calculated FHI
