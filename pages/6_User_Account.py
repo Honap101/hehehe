@@ -403,6 +403,30 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+<style>
+/* Make all footer buttons look like the outlined Support button */
+.auth-footer .stButton > button,
+.auth-footer .stLinkButton > a {
+    background: white !important;
+    color: #374151 !important;
+    border: 2px solid #d1d5db !important;
+    border-radius: 12px !important;
+    padding: 0.75rem 1.25rem !important;
+    font-weight: 600 !important;
+    font-size: 0.95rem !important;
+    transition: all 0.2s ease !important;
+    box-shadow: none !important;
+}
+
+.auth-footer .stButton > button:hover,
+.auth-footer .stLinkButton > a:hover {
+    background: #f9fafb !important;
+    border-color: #9ca3af !important;
+    color: #111827 !important;
+}
+</style>
+
+
 # ===============================
 # AUTHENTICATION HELPERS (from your existing code)
 # ===============================
@@ -1063,7 +1087,7 @@ else:
 st.markdown('</div>', unsafe_allow_html=True)
 
 # ===============================
-# FOOTER (buttons that open popups)
+# FOOTER 
 # ===============================
 st.markdown('<div class="auth-footer">', unsafe_allow_html=True)
 st.markdown('<div class="footer-text">🛡️ Your data is secure and encrypted • Built with privacy in mind</div>', unsafe_allow_html=True)
@@ -1079,4 +1103,5 @@ with c3:
     st.link_button("Support", "mailto:support@fynstra.app", use_container_width=True)
 
 st.markdown('</div>', unsafe_allow_html=True)
+
 
