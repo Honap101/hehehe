@@ -229,39 +229,19 @@ st.markdown(
         margin: 1rem 0 !important;
     }}
 
-    /* Reduce spacing between title and tabs more aggressively */
-    .stTabs {{
-        margin-top: -2rem !important;
-    }}
-
+    /* Reduce spacing between tabs and content */
     .stTabs [data-baseweb="tab-list"] {{
         margin-bottom: 1rem !important;
     }}
 
-    /* Reduce spacing after subtitle */
-    div[data-testid="stMarkdownContainer"] h3 {{
-        margin-bottom: 1rem !important;
-    }}
-
-    /* Reduce overall page padding */
+    /* Remove excessive margins */
     .block-container {{
-        padding-top: 0.5rem !important;
-        padding-bottom: 1rem !important;
+        padding-top: 1rem !important;
     }}
 
-    /* Reduce spacing between elements in main container */
-    .main .block-container > div:first-child > div > div {{
-        gap: 0.5rem !important;
-    }}
-
-    /* Tighten spacing between header elements */
-    .main h1 {{
-        margin-bottom: 0.25rem !important;
-    }}
-
-    .main h3 {{
-        margin-top: 0.25rem !important;
-        margin-bottom: 1rem !important;
+    /* Improve container spacing */
+    div[data-testid="stVerticalBlock"] > div[style*="flex-direction: column"] > div {{
+        gap: 0.75rem !important;
     }}
 
     /* Checkbox Styling */
