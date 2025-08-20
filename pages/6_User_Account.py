@@ -150,29 +150,43 @@ st.markdown(
         transform: translateY(-1px) !important;
     }}
 
-    /* Form Styling - Updated for no white box */
+    /* Remove complex form styling that was causing issues */
     .form-container {{
-        margin-top: 1.5rem;
-        background: rgba(255, 255, 255, 0.7);
-        backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        border-radius: 20px;
-        padding: 2rem;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+        display: none;
     }}
 
     .form-group {{
-        margin-bottom: 1.75rem;
-        position: relative;
+        display: none;
     }}
 
     .form-label {{
-        display: block;
-        font-weight: 600;
-        color: #374151;
-        font-size: 0.875rem;
-        margin-bottom: 0.75rem;
-        letter-spacing: 0.01em;
+        display: none;
+    }}
+
+    .auth-button {{
+        display: none;
+    }}
+
+    .benefits-section {{
+        display: none;
+    }}
+
+    /* Clean button styling */
+    .stButton > button[kind="primary"] {{
+        background: linear-gradient(135deg, #fc3134, #ff5f1f) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 12px !important;
+        padding: 0.75rem 1.5rem !important;
+        font-weight: 600 !important;
+        font-size: 1rem !important;
+        transition: all 0.3s ease !important;
+        box-shadow: 0 4px 12px rgba(252, 49, 52, 0.3) !important;
+    }}
+
+    .stButton > button[kind="primary"]:hover {{
+        transform: translateY(-2px) !important;
+        box-shadow: 0 8px 24px rgba(252, 49, 52, 0.4) !important;
     }}
 
     /* Enhanced Input Styling */
@@ -799,35 +813,24 @@ def render_signup_form():
         st.error("Authentication service unavailable. Please check your Supabase configuration.")
         return
     
-    st.markdown('<div class="form-container">', unsafe_allow_html=True)
-    
     with st.form("signup_form", clear_on_submit=False):
-        st.markdown('<div class="form-group">')
-        st.markdown('<label class="form-label">👤 Username</label>', unsafe_allow_html=True)
+        st.markdown("👤 **Username**")
         username = st.text_input("", placeholder="Enter your display name", key="signup_username", label_visibility="collapsed")
-        st.markdown('</div>')
         
-        st.markdown('<div class="form-group">')
-        st.markdown('<label class="form-label">📧 Email Address</label>', unsafe_allow_html=True)
+        st.markdown("📧 **Email Address**")
         email = st.text_input("", placeholder="Enter your email address", key="signup_email", label_visibility="collapsed")
-        st.markdown('</div>')
         
-        st.markdown('<div class="form-group">')
-        st.markdown('<label class="form-label">🔒 Password</label>', unsafe_allow_html=True)
+        st.markdown("🔒 **Password**")
         password = st.text_input("", type="password", placeholder="Create a strong password", key="signup_password", label_visibility="collapsed")
-        st.markdown('</div>')
         
-        st.markdown('<div class="form-group">')
-        st.markdown('<label class="form-label">🔒 Confirm Password</label>', unsafe_allow_html=True)
+        st.markdown("🔒 **Confirm Password**")
         confirm_password = st.text_input("", type="password", placeholder="Confirm your password", key="signup_confirm", label_visibility="collapsed")
-        st.markdown('</div>')
         
         # Terms acceptance
         terms_accepted = st.checkbox("I agree to the Terms of Service and Privacy Policy", key="terms_check")
         
-        st.markdown('<div class="auth-button">', unsafe_allow_html=True)
-        submitted = st.form_submit_button("🚀 Create Account")
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('<br>', unsafe_allow_html=True)
+        submitted = st.form_submit_button("🚀 Create Account", use_container_width=True, type="primary")
         
         if submitted:
             # Validation
@@ -894,8 +897,6 @@ def render_signup_form():
                         st.session_state.auth_message = f"Failed to create account: {error_msg}"
                     st.session_state.auth_message_type = "error"
                     st.rerun()
-    
-    st.markdown('</div>', unsafe_allow_html=True)
 
 def render_login_form():
     """Render login form"""
@@ -908,28 +909,21 @@ def render_login_form():
         st.error("Authentication service unavailable. Please check your Supabase configuration.")
         return
     
-    st.markdown('<div class="form-container">', unsafe_allow_html=True)
-    
     with st.form("login_form", clear_on_submit=False):
-        st.markdown('<div class="form-group">')
-        st.markdown('<label class="form-label">📧 Email Address</label>', unsafe_allow_html=True)
+        st.markdown("📧 **Email Address**")
         email = st.text_input("", placeholder="Enter your email address", key="login_email", label_visibility="collapsed")
-        st.markdown('</div>')
         
-        st.markdown('<div class="form-group">')
-        st.markdown('<label class="form-label">🔒 Password</label>', unsafe_allow_html=True)
+        st.markdown("🔒 **Password**")
         password = st.text_input("", type="password", placeholder="Enter your password", key="login_password", label_visibility="collapsed")
-        st.markdown('</div>')
         
         col1, col2 = st.columns([1, 1])
         with col1:
             remember_me = st.checkbox("Remember me")
         with col2:
-            st.markdown('<div class="forgot-password"><a href="#">Forgot password?</a></div>', unsafe_allow_html=True)
+            st.markdown('<div style="text-align: right; padding-top: 0.3rem;"><a href="#" style="color: #fc3134; text-decoration: none; font-size: 0.9rem;">Forgot password?</a></div>', unsafe_allow_html=True)
         
-        st.markdown('<div class="auth-button">', unsafe_allow_html=True)
-        submitted = st.form_submit_button("🚀 Sign In")
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('<br>', unsafe_allow_html=True)
+        submitted = st.form_submit_button("🚀 Sign In", use_container_width=True, type="primary")
         
         if submitted:
             if not email or not password:
@@ -969,8 +963,6 @@ def render_login_form():
                         st.session_state.auth_message = f"Sign in failed: {error_msg}"
                     st.session_state.auth_message_type = "error"
                     st.rerun()
-    
-    st.markdown('</div>', unsafe_allow_html=True)
 
 # ===============================
 # MAIN APPLICATION
@@ -1001,32 +993,31 @@ else:
     # User is not logged in - show auth forms
     st.markdown('<div class="auth-card">', unsafe_allow_html=True)
     
-    st.markdown("Sign in to your account or create a new one to access personalized financial insights and save your progress.")
-    
-    show_message()
-    
     # Tab-based interface
     tab1, tab2 = st.tabs(["🔐 Sign In", "🎯 Create Account"])
     
     with tab1:
-        render_login_form()
+        with st.container(border=True):
+            render_login_form()
     
     with tab2:
-        render_signup_form()
+        with st.container(border=True):
+            render_signup_form()
         
         # Sign up benefits
-        st.markdown('''
-        <div class="benefits-section">
-            <div class="benefits-title">Why create an account?</div>
-            <div class="benefits-list">
-                <div class="benefit-item">💾 Save your financial calculations and scenarios</div>
-                <div class="benefit-item">📊 Track your progress over time</div>
-                <div class="benefit-item">🤖 Get personalized AI recommendations</div>
-                <div class="benefit-item">📱 Access from any device</div>
-                <div class="benefit-item">🔒 Secure data encryption</div>
-            </div>
-        </div>
-        ''', unsafe_allow_html=True)
+        st.markdown("---")
+        st.markdown("**Why create an account?**")
+        benefits = [
+            "💾 Save your financial calculations and scenarios",
+            "📊 Track your progress over time",
+            "🤖 Get personalized AI recommendations", 
+            "📱 Access from any device",
+            "🔒 Secure data encryption"
+        ]
+        for benefit in benefits:
+            st.markdown(f"• {benefit}")
+    
+    st.markdown('</div>', unsafe_allow_html=True)
     
     st.markdown('</div>', unsafe_allow_html=True)
 
