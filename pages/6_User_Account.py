@@ -1,23 +1,10 @@
 import streamlit as st
 import base64
 from datetime import datetime
-import os
-
-# Optional imports with fallbacks
-try:
-    import gspread
-    from google.oauth2.service_account import Credentials
-    SHEETS_AVAILABLE = True
-except ImportError:
-    SHEETS_AVAILABLE = False
-    st.warning("Google Sheets integration unavailable. Install gspread and google-auth for full functionality.")
-
-try:
-    from supabase import create_client
-    SUPABASE_AVAILABLE = True
-except ImportError:
-    SUPABASE_AVAILABLE = False
-    st.error("Supabase not available. Install supabase for authentication functionality.")
+import hashlib
+import uuid
+import time
+import random
 
 def get_base64_image(image_path):
     with open(image_path, "rb") as f:
@@ -340,142 +327,153 @@ st.markdown(
 )
 
 # ===============================
-# SUPABASE & GOOGLE SHEETS SETUP
+# USING YOUR EXISTING AUTH SETUP
 # ===============================
 
-@st.cache_resource
-def init_supabase():
-    """Initialize Supabase client"""
-    if not SUPABASE_AVAILABLE:
-        return None
-        
-    try:
-        url = st.secrets.get("SUPABASE_URL") or os.environ.get("SUPABASE_URL")
-        key = st.secrets.get("SUPABASE_ANON_KEY") or os.environ.get("SUPABASE_ANON_KEY")
-        if not url or not key:
-            st.warning("Supabase credentials not found. Authentication features will be limited.")
+# Import your existing Supabase and Google Sheets setup
+try:
+    from supabase import create_client
+    import gspread
+    from google.oauth2.service_account import Credentials
+    
+    @st.cache_resource
+    def init_supabase():
+        """Initialize Supabase client using your existing setup"""
+        try:
+            url = st.secrets.get("SUPABASE_URL")
+            key = st.secrets.get("SUPABASE_ANON_KEY")
+            if not url or not key:
+                return None
+            return create_client(url, key)
+        except Exception as e:
+            st.error(f"Supabase initialization failed: {e}")
             return None
-        return create_client(url, key)
-    except Exception as e:
-        st.warning(f"Supabase initialization failed: {e}")
-        return None
 
-@st.cache_resource
-def init_sheets_client():
-    """Initialize Google Sheets client"""
-    if not SHEETS_AVAILABLE:
-        return None
-        
-    try:
-        sa_info = dict(st.secrets["GOOGLE_SERVICE_ACCOUNT"])
-        scopes = [
-            "https://www.googleapis.com/auth/spreadsheets",
-            "https://www.googleapis.com/auth/drive",
-        ]
-        creds = Credentials.from_service_account_info(sa_info, scopes=scopes)
-        return gspread.authorize(creds)
-    except Exception as e:
-        st.warning(f"Google Sheets initialization failed: {e}")
-        return None
-
-@st.cache_resource
-def open_sheet():
-    """Open the main Google Sheet"""
-    if not SHEETS_AVAILABLE:
-        return None
-        
-    try:
-        gc = init_sheets_client()
-        if gc:
-            return gc.open_by_key(st.secrets["SHEET_ID"])
-        return None
-    except Exception as e:
-        st.warning(f"Failed to open Google Sheet: {e}")
-        return None
-
-def log_auth_event(event: str, user_data: dict, note: str = ""):
-    """Log authentication events to Google Sheets"""
-    if not SHEETS_AVAILABLE:
-        return
-        
-    try:
-        sh = open_sheet()
-        if not sh:
-            return
-        
-        # Try to get or create Auth_Events worksheet
+    @st.cache_resource
+    def init_sheets_client():
+        """Initialize Google Sheets client using your existing setup"""
         try:
-            ws = sh.worksheet("Auth_Events")
-        except:
+            sa_info = dict(st.secrets["GOOGLE_SERVICE_ACCOUNT"])
+            scopes = [
+                "https://www.googleapis.com/auth/spreadsheets",
+                "https://www.googleapis.com/auth/drive",
+            ]
+            creds = Credentials.from_service_account_info(sa_info, scopes=scopes)
+            return gspread.authorize(creds)
+        except Exception as e:
+            st.error(f"Google Sheets initialization failed: {e}")
+            return None
+
+    @st.cache_resource
+    def open_sheet():
+        """Open the main Google Sheet using your existing setup"""
+        try:
+            gc = init_sheets_client()
+            if gc:
+                return gc.open_by_key(st.secrets["SHEET_ID"])
+            return None
+        except Exception as e:
+            st.error(f"Failed to open Google Sheet: {e}")
+            return None
+
+    def with_backoff(fn, tries: int = 4):
+        """Run fn() with exponential backoff on transient errors."""
+        for i in range(tries):
             try:
-                ws = sh.add_worksheet("Auth_Events", rows=5000, cols=10)
-                ws.append_row(["timestamp", "event", "user_id", "email", "username", "note"])
-            except:
+                return fn()
+            except Exception as e:
+                if i == tries - 1:
+                    raise
+                time.sleep((2 ** i) + random.random())
+
+    def log_auth_event(event: str, user: dict, note: str = ""):
+        """Log authentication events using your existing setup"""
+        try:
+            sh = open_sheet()
+            if not sh:
                 return
-        
-        # Append the event
-        ws.append_row([
-            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            event,
-            user_data.get("id", ""),
-            user_data.get("email", ""),
-            user_data.get("user_metadata", {}).get("username", ""),
-            note
-        ], value_input_option="USER_ENTERED")
-    except Exception:
-        pass  # Silent fail for optional feature
-
-def upsert_user_profile(user_data: dict):
-    """Create or update user profile in Google Sheets"""
-    if not SHEETS_AVAILABLE:
-        return
-        
-    try:
-        sh = open_sheet()
-        if not sh:
-            return
-        
-        # Try to get or create Users worksheet
-        try:
-            ws = sh.worksheet("Users")
-        except:
-            try:
-                ws = sh.add_worksheet("Users", rows=2000, cols=20)
-                ws.append_row([
-                    "user_id", "email", "username", "created_at", "last_login",
-                    "email_confirmed", "last_sign_in_at", "sign_in_count"
-                ])
-            except:
-                return
-        
-        user_id = user_data.get("id", "")
-        email = user_data.get("email", "")
-        username = user_data.get("user_metadata", {}).get("username", "")
-        
-        # Check if user already exists
-        try:
-            cell = ws.find(user_id)
-            # User exists, update last_login
-            row_num = cell.row
-            ws.update_cell(row_num, 5, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))  # last_login
-        except:
-            # New user, add row
-            try:
-                ws.append_row([
-                    user_id,
-                    email,
-                    username,
-                    user_data.get("created_at", datetime.now().isoformat()),
-                    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),  # last_login
-                    str(user_data.get("email_confirmed_at") is not None),
-                    user_data.get("last_sign_in_at", ""),
-                    1  # sign_in_count
-                ], value_input_option="USER_ENTERED")
-            except:
-                pass
             
-    except Exception:
-        pass  # Silent fail for optional feature
+            try:
+                ws = sh.worksheet("Auth_Events")
+            except gspread.WorksheetNotFound:
+                ws = sh.add_worksheet(title="Auth_Events", rows=5000, cols=10)
+                ws.append_row(["ts","event","user_id","email","username","note"])
+            
+            with_backoff(lambda: ws.append_row([
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                event,
+                user.get("id"),
+                user.get("email"),
+                (user.get("user_metadata") or {}).get("username"),
+                note
+            ], value_input_option="USER_ENTERED"))
+        except Exception:
+            pass  # Silent fail for logging
+
+    def upsert_user_row(user: dict, payload: dict = None):
+        """Create or update user row using your existing setup"""
+        try:
+            sh = open_sheet()
+            if not sh:
+                return
+            
+            try:
+                ws = sh.worksheet("Users")
+            except gspread.WorksheetNotFound:
+                ws = sh.add_worksheet(title="Users", rows=2000, cols=30)
+                ws.append_row([
+                    "user_id","email","username","created_at","last_login",
+                    "age","monthly_income","monthly_expenses","monthly_savings",
+                    "monthly_debt","total_investments","net_worth","emergency_fund",
+                    "last_FHI","consent_processing","consent_storage","consent_ai",
+                    "analytics_opt_in","consent_version","consent_ts"
+                ])
+            
+            user_id = user.get("id")
+            email = user.get("email") 
+            username = (user.get("user_metadata") or {}).get("username")
+            
+            # Try to find existing user
+            values = ws.get_all_values()
+            header = values[0] if values else []
+            rows = values[1:] if len(values) > 1 else []
+            
+            found_row_idx = None
+            if "user_id" in header:
+                uid_idx = header.index("user_id")
+                for i, row in enumerate(rows, start=2):
+                    if len(row) > uid_idx and row[uid_idx] == user_id:
+                        found_row_idx = i
+                        break
+            
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            if found_row_idx:
+                # Update existing user
+                if "last_login" in header:
+                    ws.update_cell(found_row_idx, header.index("last_login") + 1, now)
+            else:
+                # Create new user
+                base_data = {
+                    "user_id": user_id,
+                    "email": email,
+                    "username": username,
+                    "created_at": user.get("created_at", now),
+                    "last_login": now,
+                }
+                if payload:
+                    base_data.update(payload)
+                
+                row = [base_data.get(col, "") for col in header]
+                with_backoff(lambda: ws.append_row(row, value_input_option="USER_ENTERED"))
+                
+        except Exception:
+            pass  # Silent fail for logging
+
+    AUTH_AVAILABLE = True
+    
+except ImportError:
+    AUTH_AVAILABLE = False
+    st.warning("Authentication libraries not available. Please install supabase and gspread for full functionality.")
 
 # ===============================
 # AUTHENTICATION STATE MANAGEMENT
@@ -491,11 +489,11 @@ def init_auth_state():
         st.session_state.auth_message_type = None
 
 def set_user_session(user, session=None):
-    """Set user session"""
+    """Set user session and identity for the rest of the app"""
     st.session_state.auth["user"] = user
     st.session_state.auth["session"] = session
     
-    # Set user identity for the rest of the app
+    # Set identity variables that your other pages expect
     st.session_state["auth_method"] = "email"
     st.session_state["user_id"] = user.get("id")
     st.session_state["email"] = user.get("email")
@@ -504,12 +502,13 @@ def set_user_session(user, session=None):
 
 def sign_out():
     """Sign out current user"""
-    supabase = init_supabase()
-    if supabase:
-        try:
-            supabase.auth.sign_out()
-        except:
-            pass  # Silent fail if already signed out
+    if AUTH_AVAILABLE:
+        supabase = init_supabase()
+        if supabase:
+            try:
+                supabase.auth.sign_out()
+            except:
+                pass
     
     # Clear session state
     st.session_state.auth = {"user": None, "session": None}
@@ -520,7 +519,7 @@ def sign_out():
     st.session_state.auth_message_type = "success"
 
 # ===============================
-# UI COMPONENTS
+# UI HELPER FUNCTIONS
 # ===============================
 
 def show_message():
@@ -554,6 +553,10 @@ def validate_password(password):
     if not any(c.isdigit() for c in password):
         return False, "Password must contain at least one number"
     return True, "Password is strong"
+
+# ===============================
+# UI COMPONENTS
+# ===============================
 
 def render_user_profile():
     """Render logged-in user profile"""
@@ -605,10 +608,13 @@ def render_user_profile():
 
 def render_signup_form():
     """Render signup form"""
+    if not AUTH_AVAILABLE:
+        st.error("Authentication libraries not available. Please install required packages.")
+        return
+        
     supabase = init_supabase()
     if not supabase:
-        st.error("Authentication service unavailable. Please check your configuration and try again later.")
-        st.info("💡 Make sure Supabase credentials are properly configured in your app settings.")
+        st.error("Authentication service unavailable. Please check your Supabase configuration.")
         return
     
     st.markdown('<div class="form-container">', unsafe_allow_html=True)
@@ -678,9 +684,9 @@ def render_signup_form():
                     if response.user:
                         user_dict = response.user.model_dump() if hasattr(response.user, 'model_dump') else dict(response.user)
                         
-                        # Log to Google Sheets
+                        # Log using your existing setup
                         log_auth_event("signup", user_dict)
-                        upsert_user_profile(user_dict)
+                        upsert_user_row(user_dict, payload={})
                         
                         st.session_state.auth_message = f"Account created successfully! Please check your email to verify your account."
                         st.session_state.auth_message_type = "success"
@@ -703,10 +709,13 @@ def render_signup_form():
 
 def render_login_form():
     """Render login form"""
+    if not AUTH_AVAILABLE:
+        st.error("Authentication libraries not available. Please install required packages.")
+        return
+        
     supabase = init_supabase()
     if not supabase:
-        st.error("Authentication service unavailable. Please check your configuration and try again later.")
-        st.info("💡 Make sure Supabase credentials are properly configured in your app settings.")
+        st.error("Authentication service unavailable. Please check your Supabase configuration.")
         return
     
     st.markdown('<div class="form-container">', unsafe_allow_html=True)
@@ -745,9 +754,9 @@ def render_login_form():
                         
                         set_user_session(user_dict, response.session)
                         
-                        # Log to Google Sheets
+                        # Log using your existing setup
                         log_auth_event("login", user_dict)
-                        upsert_user_profile(user_dict)
+                        upsert_user_row(user_dict, payload={})
                         
                         username = user_dict.get("user_metadata", {}).get("username", "User")
                         st.session_state.auth_message = f"Welcome back, {username}! 🎉"
