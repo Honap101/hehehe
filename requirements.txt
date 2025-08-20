@@ -2,3 +2,6 @@ streamlit
 pandas
 plotly
 google-generativeai
+supabase
+gspread
+google-auth
