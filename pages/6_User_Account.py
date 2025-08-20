@@ -1065,20 +1065,81 @@ else:
 st.markdown('</div>', unsafe_allow_html=True)
 
 # ===============================
-# FOOTER 
+# FOOTER (uniform pill-style buttons)
 # ===============================
+st.markdown("""
+<style>
+/* Footer wrapper */
+.auth-footer{
+  text-align:center;
+  margin-top:3rem;
+  padding-top:2rem;
+  border-top:1px solid #e5e7eb;
+}
+
+/* Consistent "link button" look for footer buttons */
+.footer-buttons .stButton>button{
+  width:100%;
+  border-radius:9999px !important;           /* full pill */
+  background:#ffffff !important;
+  color:#374151 !important;
+  border:1.5px solid #d1d5db !important;
+  font-weight:700 !important;
+  font-size:0.95rem !important;
+  padding:0.85rem 1.25rem !important;
+  box-shadow:0 1px 2px rgba(0,0,0,0.04) !important;
+  transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease !important;
+}
+
+/* Hover/active to match a subtle link-button feel */
+.footer-buttons .stButton>button:hover{
+  transform:translateY(-1px);
+  box-shadow:0 6px 14px rgba(0,0,0,0.08) !important;
+  border-color:#9ca3af !important;
+  background:#ffffff !important;
+}
+
+.footer-buttons .stButton>button:active{
+  transform:translateY(0);
+  box-shadow:0 3px 8px rgba(0,0,0,0.06) !important;
+}
+
+/* Optional: keep footer helper text style */
+.footer-text{
+  color:#64748b;
+  font-size:0.875rem;
+  margin-bottom:1rem;
+  font-weight:500;
+}
+</style>
+""", unsafe_allow_html=True)
+
 st.markdown('<div class="auth-footer">', unsafe_allow_html=True)
 st.markdown('<div class="footer-text">🛡️ Your data is secure and encrypted • Built with privacy in mind</div>', unsafe_allow_html=True)
 
-c1, c2, c3 = st.columns(3)
-with c1:
-    if st.button("Privacy Policy", key="btn_privacy", use_container_width=True):
-        show_privacy()
-with c2:
-    if st.button("Terms of Service", key="btn_terms", use_container_width=True):
-        show_terms()
-with c3:
-    st.link_button("Support", "mailto:support@fynstra.app", use_container_width=True)
+# Uniform pill buttons (3 columns)
+col1, col2, col3 = st.columns(3)
+with st.container():
+    st.markdown('<div class="footer-buttons">', unsafe_allow_html=True)
+    with col1:
+        if st.button("Privacy Policy", key="btn_privacy_pill", use_container_width=True):
+            show_privacy()
+    with col2:
+        if st.button("Terms of Service", key="btn_terms_pill", use_container_width=True):
+            show_terms()
+    with col3:
+        # Styled like the others, but opens mail client
+        if st.button("Support", key="btn_support_pill", use_container_width=True):
+            # Trigger a client-side mailto without navigating away
+            st.markdown(
+                """
+                <script>
+                window.location.href = "mailto:support@fynstra.app";
+                </script>
+                """,
+                unsafe_allow_html=True
+            )
+    st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown('</div>', unsafe_allow_html=True)
 
