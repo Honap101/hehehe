@@ -1,5 +1,9 @@
 import streamlit as st
+import plotly.graph_objects as go
+import plotly.express as px
+import pandas as pd
 import base64
+from datetime import datetime
 
 def get_base64_image(image_path):
     with open(image_path, "rb") as f:
@@ -31,7 +35,6 @@ with st.sidebar:
         unsafe_allow_html=True
     )
 
-
 # --- CSS for sidebar background with gradient overlay ---
 st.markdown(
     f"""
@@ -50,9 +53,6 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-
-st.title("What-if Sandbox")
-
 
 # ===============================
 # CALCULATION & HELPER FUNCTIONS
@@ -117,63 +117,89 @@ def explain_fhi(components):
 
 def create_comparison_chart(base_comp, new_comp):
     """Create a comparison chart for components"""
-    categories = list(base_comp.keys())
-    base_values = list(base_comp.values())
-    new_values = list(new_comp.values())
-    
-    fig = go.Figure()
-    
-    fig.add_trace(go.Scatterpolar(
-        r=base_values,
-        theta=categories,
-        fill='toself',
-        name='Current',
-        line_color='blue',
-        opacity=0.6
-    ))
-    
-    fig.add_trace(go.Scatterpolar(
-        r=new_values,
-        theta=categories,
-        fill='toself',
-        name='Scenario',
-        line_color='red',
-        opacity=0.6
-    ))
-    
-    fig.update_layout(
-        polar=dict(
-            radialaxis=dict(visible=True, range=[0, 100])
-        ),
-        showlegend=True,
-        height=400,
-        title="Current vs Scenario Comparison"
-    )
-    
-    return fig
+    try:
+        categories = list(base_comp.keys())
+        base_values = [float(v) if v is not None else 0.0 for v in base_comp.values()]
+        new_values = [float(v) if v is not None else 0.0 for v in new_comp.values()]
+        
+        fig = go.Figure()
+        
+        fig.add_trace(go.Scatterpolar(
+            r=base_values,
+            theta=categories,
+            fill='toself',
+            name='Current',
+            line_color='blue',
+            opacity=0.6
+        ))
+        
+        fig.add_trace(go.Scatterpolar(
+            r=new_values,
+            theta=categories,
+            fill='toself',
+            name='Scenario',
+            line_color='red',
+            opacity=0.6
+        ))
+        
+        fig.update_layout(
+            polar=dict(
+                radialaxis=dict(visible=True, range=[0, 100])
+            ),
+            showlegend=True,
+            height=400,
+            title="Current vs Scenario Comparison"
+        )
+        
+        return fig
+    except Exception as e:
+        # Fallback: simple bar chart if radar fails
+        import plotly.express as px
+        import pandas as pd
+        
+        df = pd.DataFrame({
+            'Component': categories,
+            'Current': base_values,
+            'Scenario': new_values
+        })
+        
+        fig = px.bar(df, x='Component', y=['Current', 'Scenario'], 
+                     title="Current vs Scenario Comparison",
+                     barmode='group')
+        return fig
 
 # ===============================
 # MAIN APPLICATION
 # ===============================
+
+st.title("What-if Sandbox")
 st.markdown("### 🧪 Test Financial Scenarios")
 
 # Check if user has calculated FHI
 required_keys = ["FHI", "monthly_income", "monthly_expenses", "current_savings"]
-if any(key not in st.session_state for key in required_keys):
+missing_keys = [key for key in required_keys if key not in st.session_state]
+
+if missing_keys:
     st.warning("⚠️ Please complete the FHI calculation on the main Fynstra page first.")
     st.info("💡 This tool uses your current financial data to run 'what-if' scenarios.")
+    st.info(f"Missing data: {', '.join(missing_keys)}")
     st.stop()
 
 # Get current values from session state
-current_age = st.session_state.get("age", 25)
-current_income = st.session_state.get("monthly_income", 0)
-current_expenses = st.session_state.get("monthly_expenses", 0)
-current_savings = st.session_state.get("current_savings", 0)
-current_debt = st.session_state.get("monthly_debt", 0)
-current_investments = st.session_state.get("total_investments", 0)
-current_networth = st.session_state.get("net_worth", 0)
-current_emergency = st.session_state.get("emergency_fund", 0)
-current_fhi = st.session_state.get("FHI", 0)
+current_age = st.session_state.get("age", 18)
+current_income = st.session_state.get("monthly_income", 0.0)
+current_expenses = st.session_state.get("monthly_expenses", 0.0)
+current_savings = st.session_state.get("current_savings", 0.0)
+current_debt = st.session_state.get("monthly_debt", 0.0)
+current_investments = st.session_state.get("total_investments", 0.0)
+current_networth = st.session_state.get("net_worth", 0.0)
+current_emergency = st.session_state.get("emergency_fund", 0.0)
+current_fhi = st.session_state.get("FHI", 0.0)
+
+# Validate that we have meaningful data
+if current_income <= 0 or current_expenses <= 0:
+    st.error("❌ Invalid financial data detected. Please recalculate your FHI on the main page.")
+    st.stop()
 
 st.success(f"✅ Current FHI Score: **{current_fhi:.1f}/100**")
 
