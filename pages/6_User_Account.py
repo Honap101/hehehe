@@ -240,29 +240,6 @@ st.markdown(
         box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
     }}
 
-    /* User Profile Styling */
-    .user-profile {{
-        background: linear-gradient(135deg, #f0fdf4, #dcfce7);
-        border: 2px solid #bbf7d0;
-        border-radius: 24px;
-        padding: 2.5rem;
-        margin: 2rem 0;
-        text-align: center;
-        position: relative;
-        overflow: hidden;
-    }}
-
-    .user-profile::before {{
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 4px;
-        background: linear-gradient(90deg, #10b981, #34d399);
-        border-radius: 24px 24px 0 0;
-    }}
-
     .user-avatar {{
         width: 96px;
         height: 96px;
