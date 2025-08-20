@@ -931,6 +931,77 @@ def render_login_form():
                     st.rerun()
 
 # ===============================
+# POLICY CONTENT
+# ===============================
+PRIVACY_MD = """
+We collect the data you choose to provide (e.g., email, profile info, financial inputs) to power features like saved scenarios and personalized tips.  
+We never sell personal data. We use encrypted storage and role-based access.  
+**You control your data:** export or delete anytime in **Privacy & data controls**.
+
+**What we collect**
+- Account: email, username, timestamps
+- App inputs: calculations, goals, preferences
+- Diagnostics: anonymized events for reliability and abuse prevention
+
+**How we use it**
+- Provide core features, improve accuracy and reliability
+- Optional analytics (aggregated, de-identified)
+
+**Your rights**
+- Access, correct, export, delete your data
+- Withdraw consent for optional analytics
+
+**Contact**
+support@fynstra.app
+"""
+
+TERMS_MD = """
+By using Fynstra, you agree to:
+- Use the app lawfully and responsibly
+- Not reverse engineer or abuse rate limits
+- Accept that insights are **informational** and not financial advice
+
+**Accounts**
+You’re responsible for safeguarding your credentials. We may suspend accounts for abuse or security concerns.
+
+**Content & Licenses**
+You own your inputs. You grant us a limited license to process them to deliver features.
+
+**Disclaimers**
+The service is provided *as-is* without warranties. We’re not liable for indirect or consequential damages.
+
+**Changes**
+We may update these Terms; continued use means acceptance.
+
+**Contact**
+fynstra@gmail.com
+"""
+
+
+# ===============================
+# MODALS / POPOVERS
+# ===============================
+def show_privacy():
+    if hasattr(st, "dialog"):
+        @st.dialog("Privacy Policy")
+        def _d():
+            st.markdown(PRIVACY_MD)
+        _d()
+    else:
+        with st.popover("Privacy Policy"):
+            st.markdown(PRIVACY_MD)
+
+def show_terms():
+    if hasattr(st, "dialog"):
+        @st.dialog("Terms of Service")
+        def _d():
+            st.markdown(TERMS_MD)
+        _d()
+    else:
+        with st.popover("Terms of Service"):
+            st.markdown(TERMS_MD)
+
+# ===============================
 # MAIN APPLICATION
 # ===============================
 
@@ -991,14 +1062,21 @@ else:
 
 st.markdown('</div>', unsafe_allow_html=True)
 
-# Professional Footer
+# ===============================
+# FOOTER (buttons that open popups)
+# ===============================
 st.markdown('<div class="auth-footer">', unsafe_allow_html=True)
 st.markdown('<div class="footer-text">🛡️ Your data is secure and encrypted • Built with privacy in mind</div>', unsafe_allow_html=True)
-st.markdown('''
-<div class="footer-links">
-    <a href="#" class="footer-link">Privacy Policy</a>
-    <a href="#" class="footer-link">Terms of Service</a>
-    <a href="#" class="footer-link">Support</a>
-</div>
-''', unsafe_allow_html=True)
+
+c1, c2, c3 = st.columns(3)
+with c1:
+    if st.button("Privacy Policy", key="btn_privacy", use_container_width=True):
+        show_privacy()
+with c2:
+    if st.button("Terms of Service", key="btn_terms", use_container_width=True):
+        show_terms()
+with c3:
+    st.link_button("Support", "mailto:support@fynstra.app", use_container_width=True)
+
 st.markdown('</div>', unsafe_allow_html=True)
+
