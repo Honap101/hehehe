@@ -78,8 +78,7 @@ st.markdown(
         font-size: 2.5rem;
         font-weight: 800;
         background: linear-gradient(to right, #fc3134, #ff5f1f, #ffc542);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        color: black; 
         margin-bottom: 0.5rem;
         line-height: 1.2;
     }}
