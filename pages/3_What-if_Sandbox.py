@@ -185,8 +185,8 @@ if missing_keys:
     st.info(f"Missing data: {', '.join(missing_keys)}")
     st.stop()
 
-# Get current values from session state
-current_age = st.session_state.get("age", 18)
+# Get current values from session state (with safe defaults)
+current_age = st.session_state.get("age", 25)
 current_income = st.session_state.get("monthly_income", 0.0)
 current_expenses = st.session_state.get("monthly_expenses", 0.0)
 current_savings = st.session_state.get("current_savings", 0.0)
@@ -275,7 +275,8 @@ with st.container(border=True):
     if preset:
         st.info(f"📋 Applied preset: **{preset['name']}**")
     
-    col1, col2, col3 = st.columns(3)
+    # Better balanced layout with 2 columns, each containing 3 sliders
+    col1, col2 = st.columns(2)
     
     with col1:
         st.markdown("**Income & Expenses**")
@@ -293,8 +294,7 @@ with st.container(border=True):
             step=1,
             help="Percentage change in monthly expenses"
         )
-    
-    with col2:
+        
         st.markdown("**Savings & Debt**")
         savings_pct = st.slider(
             "Savings Change (%)", 
@@ -303,6 +303,9 @@ with st.container(border=True):
             step=1,
             help="Percentage change in monthly savings"
         )
+    
+    with col2:
+        st.markdown("**Debt & Investments**")
         debt_pct = st.slider(
             "Debt Payments Change (%)", 
             -30, 50, 
@@ -310,9 +313,6 @@ with st.container(border=True):
             step=1,
             help="Percentage change in monthly debt payments"
         )
-    
-    with col3:
-        st.markdown("**Investments & Emergency Fund**")
         invest_pct = st.slider(
             "Investment Growth (%)", 
             -30, 50, 
@@ -320,6 +320,8 @@ with st.container(border=True):
             step=1,
             help="Percentage change in total investments"
         )
+        
+        st.markdown("**Emergency Fund**")
         efund_pct = st.slider(
             "Emergency Fund Change (%)", 
             -30, 50, 
@@ -567,8 +569,24 @@ if st.button("💾 Save This Scenario", key="save_scenario"):
     if "saved_scenarios" not in st.session_state:
         st.session_state.saved_scenarios = []
     
+    # Create detailed scenario name if it's custom
+    scenario_name = preset.get("name", "Custom Scenario") if preset else "Custom Scenario"
+    
+    # Add descriptive suffix for custom scenarios
+    if not preset:
+        changes = []
+        if income_pct != 0: changes.append(f"Income {income_pct:+}%")
+        if expenses_pct != 0: changes.append(f"Expenses {expenses_pct:+}%")
+        if savings_pct != 0: changes.append(f"Savings {savings_pct:+}%")
+        if debt_pct != 0: changes.append(f"Debt {debt_pct:+}%")
+        if invest_pct != 0: changes.append(f"Invest {invest_pct:+}%")
+        if efund_pct != 0: changes.append(f"EFund {efund_pct:+}%")
+        
+        if changes:
+            scenario_name = f"Custom: {', '.join(changes[:2])}" + ("..." if len(changes) > 2 else "")
+    
     scenario_data = {
-        "name": preset.get("name", "Custom Scenario") if preset else "Custom Scenario",
+        "name": scenario_name,
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "current_fhi": current_fhi,
         "scenario_fhi": new_fhi,
@@ -580,6 +598,24 @@ if st.button("💾 Save This Scenario", key="save_scenario"):
             "debt_pct": debt_pct,
             "invest_pct": invest_pct,
             "efund_pct": efund_pct
+        },
+        "absolute_values": {
+            "current_income": current_income,
+            "scenario_income": scenario_income,
+            "current_expenses": current_expenses,
+            "scenario_expenses": scenario_expenses,
+            "current_savings": current_savings,
+            "scenario_savings": scenario_savings,
+            "current_debt": current_debt,
+            "scenario_debt": scenario_debt,
+            "current_investments": current_investments,
+            "scenario_investments": scenario_investments,
+            "current_emergency": current_emergency,
+            "scenario_emergency": scenario_emergency
+        },
+        "preset_adjustments": {
+            "debt_abs_delta": debt_abs_delta,
+            "savings_abs_delta": savings_abs_delta
         }
     }
     
@@ -590,20 +626,55 @@ if st.button("💾 Save This Scenario", key="save_scenario"):
 if st.session_state.get("saved_scenarios"):
     with st.expander("📁 Saved Scenarios", expanded=False):
         for i, scenario in enumerate(st.session_state.saved_scenarios):
-            col1, col2, col3 = st.columns([2, 1, 1])
-            
-            with col1:
-                st.write(f"**{scenario['name']}**")
-                st.caption(f"Saved: {scenario['timestamp']}")
-            
-            with col2:
-                change_color = "green" if scenario['change'] > 0 else "red"
-                st.markdown(f"FHI: {scenario['scenario_fhi']:.1f} (<span style='color:{change_color}'>{scenario['change']:+.1f}</span>)", unsafe_allow_html=True)
-            
-            with col3:
-                if st.button("🗑️ Delete", key=f"delete_scenario_{i}"):
-                    st.session_state.saved_scenarios.pop(i)
-                    st.rerun()
+            with st.container(border=True):
+                col1, col2, col3 = st.columns([3, 2, 1])
+                
+                with col1:
+                    st.markdown(f"**{scenario['name']}**")
+                    st.caption(f"Saved: {scenario['timestamp']}")
+                    
+                    # Show parameter details
+                    params = scenario['parameters']
+                    param_details = []
+                    if params['income_pct'] != 0: param_details.append(f"Income: {params['income_pct']:+}%")
+                    if params['expenses_pct'] != 0: param_details.append(f"Expenses: {params['expenses_pct']:+}%")
+                    if params['savings_pct'] != 0: param_details.append(f"Savings: {params['savings_pct']:+}%")
+                    if params['debt_pct'] != 0: param_details.append(f"Debt: {params['debt_pct']:+}%")
+                    if params['invest_pct'] != 0: param_details.append(f"Investments: {params['invest_pct']:+}%")
+                    if params['efund_pct'] != 0: param_details.append(f"Emergency Fund: {params['efund_pct']:+}%")
+                    
+                    if param_details:
+                        st.caption(f"Changes: {' • '.join(param_details)}")
+                
+                with col2:
+                    change_color = "green" if scenario['change'] > 0 else "red"
+                    st.markdown(f"**FHI Impact:** {scenario['scenario_fhi']:.1f}")
+                    st.markdown(f"<span style='color:{change_color}'>{scenario['change']:+.1f} points</span>", unsafe_allow_html=True)
+                    
+                    # Show key absolute values if available
+                    if 'absolute_values' in scenario:
+                        abs_vals = scenario['absolute_values']
+                        with st.expander("💰 Scenario Values"):
+                            st.write(f"**Income:** ₱{abs_vals['current_income']:,.0f} → ₱{abs_vals['scenario_income']:,.0f}")
+                            st.write(f"**Expenses:** ₱{abs_vals['current_expenses']:,.0f} → ₱{abs_vals['scenario_expenses']:,.0f}")
+                            st.write(f"**Savings:** ₱{abs_vals['current_savings']:,.0f} → ₱{abs_vals['scenario_savings']:,.0f}")
+                            if abs_vals['current_debt'] > 0:
+                                st.write(f"**Debt:** ₱{abs_vals['current_debt']:,.0f} → ₱{abs_vals['scenario_debt']:,.0f}")
+                            if abs_vals['current_investments'] > 0:
+                                st.write(f"**Investments:** ₱{abs_vals['current_investments']:,.0f} → ₱{abs_vals['scenario_investments']:,.0f}")
+                            if abs_vals['current_emergency'] > 0:
+                                st.write(f"**Emergency Fund:** ₱{abs_vals['current_emergency']:,.0f} → ₱{abs_vals['scenario_emergency']:,.0f}")
+                
+                with col3:
+                    if st.button("🗑️ Delete", key=f"delete_scenario_{i}"):
+                        st.session_state.saved_scenarios.pop(i)
+                        st.rerun()
+                    
+                    # Load scenario button
+                    if st.button("📥 Load", key=f"load_scenario_{i}", help="Apply this scenario's settings"):
+                        # This would require updating the slider values, which is tricky in Streamlit
+                        # For now, we'll show the parameters
+                        st.info("💡 Tip: Note the parameter values above and manually adjust the sliders to recreate this scenario.")
 
 st.markdown("---")
 st.caption("💡 **Tip**: Use this tool regularly to test different financial strategies and see their potential impact before making real changes to your finances.")
