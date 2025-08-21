@@ -1117,7 +1117,15 @@ if st.session_state.get('proceed'):
 
         # Update session state
         st.session_state["FHI"] = FHI_rounded
-        st.session_state["current_savings"] = monthly_savings
+        st.session_state["current_savings"] = monthly_savings  # This is what what-if sandbox looks for
+        st.session_state["monthly_savings"] = monthly_savings  # Keep this for consistency
+        st.session_state["age"] = age
+        st.session_state["monthly_income"] = monthly_income
+        st.session_state["monthly_expenses"] = monthly_expenses
+        st.session_state["monthly_debt"] = monthly_debt
+        st.session_state["total_investments"] = total_investments
+        st.session_state["net_worth"] = net_worth
+        st.session_state["emergency_fund"] = emergency_fund
 
         # Save to database if user is signed in
         if user_signed_in:
