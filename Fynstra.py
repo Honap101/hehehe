@@ -2,440 +2,80 @@ import streamlit as st
 import plotly.graph_objects as go
 import base64
 from datetime import datetime
-import io
-
-# PDF Generation imports
-try:
-    from reportlab.platypus import (
-        SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
-    )
-    from reportlab.platypus.flowables import HRFlowable
-    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib import colors
-    from reportlab.graphics.shapes import Drawing, Rect, String
-    from reportlab.graphics.charts.barcharts import HorizontalBarChart
-    PDF_AVAILABLE = True
-except ImportError:
-    PDF_AVAILABLE = False
 
 # --- Sidebar Logo and Title (PUT THIS FIRST) ---
 def get_base64_image(image_path):
-    try:
-        with open(image_path, "rb") as f:
-            data = f.read()
-        return base64.b64encode(data).decode()
-    except FileNotFoundError:
-        return ""
+    with open(image_path, "rb") as f:
+        data = f.read()
+    return base64.b64encode(data).decode()
 
-bg_base64 = get_base64_image("sidebar_background.png")
+bg_base64 = get_base64_image("sidebar_background.png")  # Replace with your image path
 logow_base64 = get_base64_image("logo_white.png") 
 logoc_base64 = get_base64_image("logo_colored.png")
 
-# Only show sidebar content if images exist
-if logoc_base64:
-    with st.sidebar:
-        st.markdown(
-            f"""
-            <div style='
-                display: flex;
-                flex-direction: column;
-                justify-content: flex-end;
-                align-items: center;
-                text-align: center;
-                padding: 0;
-            '>
-                <img src="data:image/png;base64,{logoc_base64}" 
-                     width="150" 
-                     style="display:block; margin-bottom:10px; filter: drop-shadow(2px 2px 5px white);">
-                <h1 style='color:#ffffff; font-size:20px; margin:0;'>Fynstra AI</h1>
-                <p style='color:#ffffff; font-size:14px; margin:0 0 20px 0;'>Your AI-Powered Financial Strategy and Analytics Platform</p>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-# CSS for sidebar background
-if bg_base64:
+with st.sidebar:
     st.markdown(
         f"""
-        <style>
-        [data-testid="stSidebar"] {{
-            background: linear-gradient(to bottom, rgba(252,49,52,0.7), rgba(255,197,66,0.7)),
-                        url("data:image/png;base64,{bg_base64}") no-repeat center;
-            background-size: cover;
-        }}
-        [data-testid="stSidebar"] * {{
-            color: white;
-        }}
-        </style>
+        <div style='
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;  /* push to bottom */
+            align-items: center;
+            text-align: center;
+            padding: 0;
+        '>
+            <img src="data:image/png;base64,{logoc_base64}" 
+                 width="150" 
+                 style="display:block; margin-bottom:10px; filter: drop-shadow(2px 2px 5px white);">
+            <h1 style='color:#ffffff; font-size:20px; margin:0;'>Fynstra AI</h1>
+            <p style='color:#ffffff; font-size:14px; margin:0 0 20px 0;'>Your AI-Powered Financial Strategy and Analytics Platform</p>
+        </div>
         """,
         unsafe_allow_html=True
     )
 
-# ===============================
-# PDF GENERATION FUNCTIONS
-# ===============================
 
-def create_pdf_styles():
-    """Create PDF styles matching Fynstra's color scheme"""
-    if not PDF_AVAILABLE:
-        return None
-        
-    base_styles = getSampleStyleSheet()
-    
-    # Fynstra color palette
-    FYNSTRA_RED = colors.HexColor("#fc3134")
-    FYNSTRA_ORANGE = colors.HexColor("#ff5f1f") 
-    FYNSTRA_GOLD = colors.HexColor("#ffc542")
-    DARK_GRAY = colors.HexColor("#333333")
-    MEDIUM_GRAY = colors.HexColor("#666666")
-    LIGHT_GRAY = colors.HexColor("#f8f9fa")
-    
-    styles = {
-        "title": ParagraphStyle(
-            "title",
-            parent=base_styles["Heading1"],
-            fontName="Helvetica-Bold",
-            fontSize=24,
-            leading=28,
-            textColor=FYNSTRA_RED,
-            spaceAfter=12,
-            alignment=1,
-        ),
-        "subtitle": ParagraphStyle(
-            "subtitle",
-            parent=base_styles["BodyText"],
-            fontName="Helvetica",
-            fontSize=12,
-            leading=16,
-            textColor=MEDIUM_GRAY,
-            spaceAfter=16,
-            alignment=1,
-        ),
-        "section_header": ParagraphStyle(
-            "section_header",
-            parent=base_styles["Heading2"],
-            fontName="Helvetica-Bold",
-            fontSize=16,
-            leading=20,
-            textColor=FYNSTRA_ORANGE,
-            spaceBefore=12,
-            spaceAfter=8,
-        ),
-        "body": ParagraphStyle(
-            "body",
-            parent=base_styles["BodyText"],
-            fontName="Helvetica",
-            fontSize=11,
-            leading=15,
-            textColor=DARK_GRAY,
-            spaceAfter=8,
-        ),
-        "small": ParagraphStyle(
-            "small",
-            parent=base_styles["BodyText"],
-            fontName="Helvetica",
-            fontSize=9,
-            leading=12,
-            textColor=MEDIUM_GRAY,
-            spaceAfter=4,
-        ),
-        "score": ParagraphStyle(
-            "score",
-            parent=base_styles["Heading1"],
-            fontName="Helvetica-Bold",
-            fontSize=36,
-            leading=40,
-            textColor=FYNSTRA_RED,
-            alignment=1,
-        ),
-    }
-    return styles, FYNSTRA_RED, FYNSTRA_ORANGE, FYNSTRA_GOLD, LIGHT_GRAY
+# --- CSS for sidebar background with gradient overlay ---
+st.markdown(
+    f"""
+    <style>
+    [data-testid="stSidebar"] {{
+        background: linear-gradient(to bottom, rgba(252,49,52,0.7), rgba(255,197,66,0.7)),
+                    url("data:image/png;base64,{bg_base64}") no-repeat center;
+        background-size: cover;
+    }}
 
-def create_fhi_score_banner(fhi_score: float):
-    """Create a visual banner for the FHI score"""
-    if not PDF_AVAILABLE:
-        return None
-        
-    d = Drawing(500, 80)
-    
-    # Background rectangle
-    d.add(Rect(0, 0, 500, 80, fillColor=colors.white, strokeColor=colors.HexColor("#e5e7eb"), strokeWidth=1))
-    
-    # Gradient bar at top
-    d.add(Rect(0, 70, 250, 10, fillColor=colors.HexColor("#fc3134"), strokeColor=None))
-    d.add(Rect(250, 70, 250, 10, fillColor=colors.HexColor("#ffc542"), strokeColor=None))
-    
-    # Title and score
-    title = String(20, 45, "Financial Health Index", fontName="Helvetica-Bold", fontSize=16, fillColor=colors.HexColor("#333333"))
-    score = String(320, 35, f"{fhi_score:.1f}", fontName="Helvetica-Bold", fontSize=28, fillColor=colors.HexColor("#fc3134"))
-    score_label = String(420, 40, "/ 100", fontName="Helvetica", fontSize=14, fillColor=colors.HexColor("#666666"))
-    
-    d.add(title)
-    d.add(score)
-    d.add(score_label)
-    
-    return d
+    /* Make all sidebar text white */
+    [data-testid="stSidebar"] * {{
+        color: white;
+    }}
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
-def create_component_chart(components: dict):
-    """Create a horizontal bar chart for component scores"""
-    if not PDF_AVAILABLE:
-        return None
-        
-    labels = list(components.keys())
-    values = [float(components[k]) for k in labels]
-
-    d = Drawing(500, 250)
-    chart = HorizontalBarChart()
-    chart.x = 80
-    chart.y = 30
-    chart.height = 190
-    chart.width = 400
-    chart.data = [values]
-    chart.categoryAxis.categoryNames = labels
-    chart.categoryAxis.labels.fontName = "Helvetica"
-    chart.categoryAxis.labels.fontSize = 10
-    chart.valueAxis.valueMin = 0
-    chart.valueAxis.valueMax = 100
-    chart.valueAxis.labels.fontName = "Helvetica"
-    chart.valueAxis.labels.fontSize = 9
-    
-    # Fynstra color for bars
-    chart.bars[0].fillColor = colors.HexColor("#ff5f1f")
-    chart.bars[0].strokeColor = colors.white
-    chart.barLabelFormat = "%0.0f"
-    chart.barLabels.fontName = "Helvetica-Bold"
-    chart.barLabels.fontSize = 9
-    chart.barLabels.fillColor = colors.HexColor("#333333")
-    
-    d.add(chart)
-    return d
-
-def create_data_table(data_rows):
-    """Create a styled table for financial data"""
-    if not PDF_AVAILABLE:
-        return None
-        
-    table = Table(data_rows, colWidths=[180, 200])
-    table.setStyle(TableStyle([
-        ("FONT", (0, 0), (-1, -1), "Helvetica", 10),
-        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
-        ("TEXTCOLOR", (0, 0), (0, -1), colors.HexColor("#666666")),
-        ("TEXTCOLOR", (1, 0), (1, -1), colors.HexColor("#333333")),
-        ("ALIGN", (0, 0), (-1, -1), "LEFT"),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("ROWBACKGROUNDS", (0, 0), (-1, -1), [colors.white, colors.HexColor("#f8f9fa")]),
-        ("LINEBELOW", (0, 0), (-1, -1), 0.5, colors.HexColor("#e5e7eb")),
-        ("LEFTPADDING", (0, 0), (-1, -1), 10),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 10),
-        ("TOPPADDING", (0, 0), (-1, -1), 8),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
-    ]))
-    return table
-
-def generate_fynstra_pdf(fhi_score: float, components: dict, user_inputs: dict) -> bytes:
-    """Generate a professional PDF report with Fynstra branding"""
-    if not PDF_AVAILABLE:
-        return generate_text_report(fhi_score, components, user_inputs).encode('utf-8')
-    
-    try:
-        styles_data = create_pdf_styles()
-        if styles_data is None:
-            return generate_text_report(fhi_score, components, user_inputs).encode('utf-8')
-            
-        styles, FYNSTRA_RED, FYNSTRA_ORANGE, FYNSTRA_GOLD, LIGHT_GRAY = styles_data
-        
-        buffer = io.BytesIO()
-        doc = SimpleDocTemplate(
-            buffer,
-            pagesize=A4,
-            leftMargin=40,
-            rightMargin=40,
-            topMargin=40,
-            bottomMargin=40,
-            title="Fynstra Financial Health Report"
-        )
-        
-        story = []
-        
-        # Header
-        story.append(Paragraph("Financial Health Report", styles["title"]))
-        story.append(Paragraph(
-            f"Generated on {datetime.now().strftime('%B %d, %Y at %I:%M %p')} | Fynstra AI Platform",
-            styles["subtitle"]
-        ))
-        story.append(Spacer(1, 20))
-        
-        # FHI Score Banner
-        banner = create_fhi_score_banner(fhi_score)
-        if banner:
-            story.append(banner)
-        story.append(Spacer(1, 20))
-        
-        # Overall Assessment
-        if fhi_score >= 85:
-            assessment = "Excellent! You're in great financial shape and well-prepared for the future."
-        elif fhi_score >= 70:
-            assessment = "Good! You have a solid foundation. Stay consistent and work on gaps where needed."
-        elif fhi_score >= 50:
-            assessment = "Fair. You're on your way, but some areas need attention to build a stronger safety net."
-        else:
-            assessment = "Needs Improvement. Your finances require urgent attention."
-            
-        story.append(Paragraph("Overall Assessment", styles["section_header"]))
-        story.append(Paragraph(assessment, styles["body"]))
-        story.append(Spacer(1, 15))
-        
-        # Financial Profile
-        story.append(HRFlowable(width="100%", thickness=1, color=FYNSTRA_ORANGE))
-        story.append(Spacer(1, 10))
-        story.append(Paragraph("Your Financial Profile", styles["section_header"]))
-        
-        profile_data = [
-            ["Age", f"{user_inputs.get('age', 'N/A')} years"],
-            ["Monthly Income", f"₱{user_inputs.get('income', 0):,.0f}"],
-            ["Monthly Expenses", f"₱{user_inputs.get('expenses', 0):,.0f}"],
-            ["Monthly Savings", f"₱{user_inputs.get('savings', 0):,.0f}"],
-            ["Total Investments", f"₱{user_inputs.get('total_investments', 0):,.0f}"],
-            ["Net Worth", f"₱{user_inputs.get('net_worth', 0):,.0f}"],
-            ["Emergency Fund", f"₱{user_inputs.get('emergency_fund', 0):,.0f}"],
-        ]
-        
-        profile_table = create_data_table(profile_data)
-        if profile_table:
-            story.append(profile_table)
-        story.append(Spacer(1, 20))
-        
-        # Component Breakdown
-        story.append(HRFlowable(width="100%", thickness=1, color=FYNSTRA_ORANGE))
-        story.append(Spacer(1, 10))
-        story.append(Paragraph("Component Breakdown", styles["section_header"]))
-        story.append(Paragraph(
-            "Your FHI score is calculated from five key components. Each component is scored from 0 to 100, with higher scores indicating better financial health.",
-            styles["body"]
-        ))
-        story.append(Spacer(1, 10))
-        
-        # Component chart
-        chart = create_component_chart(components)
-        if chart:
-            story.append(chart)
-        story.append(Spacer(1, 15))
-        
-        # Component details
-        component_data = []
-        for component, score in components.items():
-            component_data.append([component, f"{score:.1f}/100"])
-        
-        component_table = create_data_table(component_data)
-        if component_table:
-            story.append(component_table)
-        story.append(Spacer(1, 20))
-        
-        # Recommendations
-        story.append(HRFlowable(width="100%", thickness=1, color=FYNSTRA_ORANGE))
-        story.append(Spacer(1, 10))
-        story.append(Paragraph("Key Recommendations", styles["section_header"]))
-        
-        recommendations = []
-        if components.get("Emergency Fund", 0) < 60:
-            recommendations.append("Build your emergency fund to cover 3-6 months of expenses")
-        if components.get("Debt-to-Income", 0) < 70:
-            recommendations.append("Focus on reducing high-interest debt to improve your debt-to-income ratio")
-        if components.get("Savings Rate", 0) < 20:
-            recommendations.append("Increase your monthly savings rate to at least 20% of income")
-        if components.get("Investment", 0) < 50:
-            recommendations.append("Start or increase regular investments for long-term wealth building")
-        if components.get("Net Worth", 0) < 50:
-            recommendations.append("Focus on building assets and reducing liabilities to grow net worth")
-        
-        if not recommendations:
-            recommendations.append("Continue your excellent financial habits and consider advanced investment strategies")
-        
-        for i, rec in enumerate(recommendations[:5], 1):
-            story.append(Paragraph(f"{i}. {rec}", styles["body"]))
-        
-        story.append(Spacer(1, 20))
-        
-        # Footer
-        story.append(HRFlowable(width="100%", thickness=0.5, color=LIGHT_GRAY))
-        story.append(Spacer(1, 10))
-        story.append(Paragraph(
-            "This report is for informational purposes only and does not constitute financial advice. "
-            "For personalized financial planning, consult with a qualified financial advisor.",
-            styles["small"]
-        ))
-        story.append(Spacer(1, 5))
-        story.append(Paragraph(
-            "Generated by Fynstra AI - Your AI-Powered Financial Strategy Platform",
-            styles["small"]
-        ))
-        
-        doc.build(story)
-        pdf_data = buffer.getvalue()
-        buffer.close()
-        return pdf_data
-        
-    except Exception as e:
-        st.error(f"PDF generation failed: {e}. Generating text report instead.")
-        return generate_text_report(fhi_score, components, user_inputs).encode('utf-8')
-
-def generate_text_report(fhi_score, components, user_data):
-    """Generate a text report for download"""
-    report = f"""
-FYNSTRA FINANCIAL HEALTH REPORT
-Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-
-===========================================
-OVERALL FINANCIAL HEALTH INDEX (FHI): {fhi_score}/100
-===========================================
-
-USER PROFILE:
-Age: {user_data.get('age', 'N/A')} years
-Monthly Income: ₱{user_data.get('income', 0):,.2f}
-Monthly Expenses: ₱{user_data.get('expenses', 0):,.2f}
-Monthly Savings: ₱{user_data.get('savings', 0):,.2f}
-
-COMPONENT BREAKDOWN:
-"""
-    
-    for component, score in components.items():
-        report += f"\n{component}: {score:.1f}/100"
-        
-    report += f"""
-
-RECOMMENDATIONS:
-- Focus on improving components scoring below 60
-- Maintain consistency in savings and investments
-- Review and adjust your financial strategy regularly
-
-This report was generated by Fynstra AI - Your Financial Strategy Platform
-"""
-    
-    return report
-
-# ===============================
-# UTILITY FUNCTIONS
-# ===============================
-
+# Add function to load user data
 def load_user_financial_data():
     """Load user's financial data if they are signed in"""
     try:
+        # Import here to avoid issues if auth modules aren't available
         from supabase import create_client
         import gspread
         from google.oauth2.service_account import Credentials
         import time
         
+        # Check if user is authenticated
         user_id = st.session_state.get("user_id")
         if not user_id:
             return False
         
+        # Rate limiting for loads
         last_load_time = st.session_state.get("last_load_time", 0)
         current_time = time.time()
-        if current_time - last_load_time < 5:
+        if current_time - last_load_time < 5:  # Wait at least 5 seconds between loads
             return False
             
+        # Initialize Google Sheets client
         try:
             sa_info = dict(st.secrets["GOOGLE_SERVICE_ACCOUNT"])
             scopes = [
@@ -454,6 +94,7 @@ def load_user_financial_data():
                 st.error(f"Failed to connect to database: {e}")
                 return False
             
+        # Get user data from Google Sheets
         try:
             values = ws.get_all_values()
             if not values:
@@ -462,6 +103,7 @@ def load_user_financial_data():
             header = values[0]
             rows = values[1:] if len(values) > 1 else []
             
+            # Find user row
             if "user_id" not in header:
                 return False
                 
@@ -476,6 +118,7 @@ def load_user_financial_data():
             if not user_row:
                 return False
                 
+            # Map data to session state with exact key matching
             field_mapping = {
                 "age": "age",
                 "monthly_income": "monthly_income", 
@@ -497,18 +140,23 @@ def load_user_financial_data():
                         
                         if cell_value and cell_value != "" and cell_value != "0":
                             try:
+                                # Convert to float first, then int for age if needed
                                 value = float(cell_value)
-                                if value >= 0:
+                                if value >= 0:  # Load even if 0 for financial fields
                                     if session_key == "age":
+                                        # For age, convert to int but store as float to avoid type conflicts
                                         st.session_state[session_key] = float(int(value))
                                     else:
                                         st.session_state[session_key] = value
                                     loaded_fields.append(session_key)
                             except (ValueError, TypeError):
+                                # Keep default if conversion fails
                                 pass
             
+            # Update load time
             st.session_state["last_load_time"] = current_time
             
+            # Success message
             if loaded_fields:
                 st.success(f"✅ Loaded {len(loaded_fields)} fields from your saved data")
                             
@@ -522,6 +170,7 @@ def load_user_financial_data():
             return False
             
     except ImportError:
+        # Auth modules not available
         return False
     except Exception as e:
         if "429" in str(e) or "Quota exceeded" in str(e):
@@ -529,7 +178,7 @@ def load_user_financial_data():
         return False
 
 def save_user_financial_data():
-    """Save user's financial data to the database"""
+    """Save user's financial data to the database with auto-create user row"""
     try:
         from supabase import create_client
         import gspread
@@ -545,12 +194,14 @@ def save_user_financial_data():
         if not user_id:
             return False
             
+        # Check if we recently saved (rate limiting)
         last_save_time = st.session_state.get("last_save_time", 0)
         current_time = time.time()
-        if current_time - last_save_time < 30:
+        if current_time - last_save_time < 30:  # Wait at least 30 seconds between saves
             st.info("⏱️ Please wait before saving again (rate limiting)")
             return False
             
+        # Prepare data to save with current input values
         data_to_save = {
             "age": st.session_state.get("age", 0),
             "monthly_income": st.session_state.get("monthly_income", 0),
@@ -563,10 +214,12 @@ def save_user_financial_data():
             "last_FHI": st.session_state.get("FHI", 0)
         }
         
+        # Only save if we have some meaningful data
         has_meaningful_data = any(data_to_save[key] > 0 for key in data_to_save.keys() if key != "last_FHI")
         if not has_meaningful_data:
             return False
         
+        # Initialize Google Sheets
         try:
             sa_info = dict(st.secrets["GOOGLE_SERVICE_ACCOUNT"])
             scopes = [
@@ -585,6 +238,7 @@ def save_user_financial_data():
                 st.error(f"Failed to connect to database for saving: {e}")
                 return False
             
+        # Get all data and find/create user row
         try:
             values = ws.get_all_values()
             if not values:
@@ -593,18 +247,21 @@ def save_user_financial_data():
             header = values[0]
             rows = values[1:] if len(values) > 1 else []
             
+            # Find user row
             if "user_id" not in header:
                 return False
                 
             uid_idx = header.index("user_id")
             user_row_idx = None
             
-            for i, row in enumerate(rows, start=2):
+            for i, row in enumerate(rows, start=2):  # Start at 2 because of header
                 if len(row) > uid_idx and row[uid_idx] == user_id:
                     user_row_idx = i
                     break
                     
+            # CREATE USER ROW if not found
             if not user_row_idx:
+                # Prepare new user row data
                 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 new_row_data = []
                 
@@ -622,22 +279,24 @@ def save_user_financial_data():
                     elif col in data_to_save:
                         new_row_data.append(str(data_to_save[col]))
                     else:
-                        new_row_data.append("")
+                        new_row_data.append("")  # Empty for other columns
                 
+                # Add the new row
                 try:
                     ws.append_row(new_row_data)
-                    user_row_idx = len(rows) + 2
+                    user_row_idx = len(rows) + 2  # +2 because header is row 1, and we just added a row
                     st.success("📝 Created your user profile in the database")
                 except Exception as e:
                     st.error(f"Failed to create user profile: {e}")
                     return False
             
+            # Update user row with financial data
             cells_to_update = []
             updated_fields = []
             
             for field, value in data_to_save.items():
                 if field in header:
-                    col_idx = header.index(field) + 1
+                    col_idx = header.index(field) + 1  # +1 for 1-based indexing
                     cell_address = gspread.utils.rowcol_to_a1(user_row_idx, col_idx)
                     cells_to_update.append({
                         'range': cell_address,
@@ -645,6 +304,7 @@ def save_user_financial_data():
                     })
                     updated_fields.append(field)
             
+            # Batch update
             if cells_to_update:
                 def with_backoff(fn, tries: int = 3):
                     for i in range(tries):
@@ -665,6 +325,7 @@ def save_user_financial_data():
                 with_backoff(lambda: ws.batch_update(cells_to_update))
                 st.session_state["last_save_time"] = current_time
                 
+                # Show success message
                 if updated_fields:
                     st.success(f"💾 Successfully saved {len(updated_fields)} financial fields!")
                     
@@ -692,9 +353,12 @@ def validated_number_input(label, key, min_value=0.0, step=1.0, help_text=None, 
     def update_status():
         st.session_state[f"{key}_status"] = "✅" if st.session_state.get(key, 0) > 0 else "⬜️"
 
+    # Initialize session state status
     if f"{key}_status" not in st.session_state:
         st.session_state[f"{key}_status"] = "⬜️"
 
+    # Get default value from session state if available, otherwise use min_value
+    # Remove any 'value' from kwargs to avoid conflicts
     kwargs_clean = {k: v for k, v in kwargs.items() if k != "value"}
     
     if key in st.session_state and st.session_state[key] is not None:
@@ -702,16 +366,19 @@ def validated_number_input(label, key, min_value=0.0, step=1.0, help_text=None, 
     else:
         default_value = float(min_value)
 
+    help_html = f"<span style='cursor: help; color: #1f77b4;' title='{help_text}'>" if help_text else ""
     st.markdown(
         f"""
             <div style='display:flex; align-items:center; gap:6px; font-size:14px; margin-bottom:2px;'>
                 <span>{st.session_state[f'{key}_status']}</span>
                 <span>{label}</span>
+                {help_html}
             </div>
             """,
             unsafe_allow_html=True
     )
 
+    # Input box below with default value - ensure all numeric types are consistent
     value = st.number_input(
         label="",
         min_value=float(min_value),
@@ -722,7 +389,9 @@ def validated_number_input(label, key, min_value=0.0, step=1.0, help_text=None, 
         **kwargs_clean
     )
 
+    # Update check status initially
     update_status()
+
     return value
 
 def create_component_radar_chart(components):
@@ -760,73 +429,106 @@ def create_component_radar_chart(components):
     return fig
 
 def interpret(label, score):
-    if label == "Net Worth":
-        return (
-            "Your *net worth is low* relative to your income." if score < 40 else
-            "Your *net worth is progressing*, but still has room to grow." if score < 70 else
-            "You have a *strong net worth* relative to your income."
-        ), [
-            "Build your assets by saving and investing consistently.",
-            "Reduce liabilities such as debts and loans.",
-            "Track your net worth regularly to monitor growth."
-        ]
-    if label == "Debt-to-Income":
-        return (
-            "Your *debt is taking a big chunk of your income*." if score < 40 else
-            "You're *managing debt moderately well*, but aim to lower it further." if score < 70 else
-            "Your *debt load is well-managed*."
-        ), [
-            "Pay down high-interest debts first.",
-            "Avoid taking on new unnecessary credit obligations.",
-            "Increase income to improve your ratio."
-        ]
-    if label == "Savings Rate":
-        return (
-            "You're *saving very little* monthly." if score < 40 else
-            "Your *savings rate is okay*, but can be improved." if score < 70 else
-            "You're *saving consistently and strongly*."
-        ), [
-            "Automate savings transfers if possible.",
-            "Set a target of saving at least 20% of income.",
-            "Review expenses to increase what's saved."
-        ]
-    if label == "Investment":
-        return (
-            "You're *not investing much yet*." if score < 40 else
-            "You're *starting to invest*; try to boost it." if score < 70 else
-            "You're *investing well* and building wealth."
-        ), [
-            "Start small and invest regularly.",
-            "Diversify your portfolio for stability.",
-            "Aim for long-term investing over short-term speculation."
-        ]
-    if label == "Emergency Fund":
-        return (
-            "You have *less than 1 month saved* for emergencies." if score < 40 else
-            "You're *halfway to a full emergency buffer*." if score < 70 else
-            "✅ Your *emergency fund is solid*."
-        ), [
-            "Build up to 3–6 months of essential expenses.",
-            "Keep it liquid and easily accessible.",
-            "Set a monthly auto-save amount."
-        ]
+            if label == "Net Worth":
+                return (
+                    "Your *net worth is low* relative to your income." if score < 40 else
+                    "Your *net worth is progressing*, but still has room to grow." if score < 70 else
+                    "You have a *strong net worth* relative to your income."
+                ), [
+                    "Build your assets by saving and investing consistently.",
+                    "Reduce liabilities such as debts and loans.",
+                    "Track your net worth regularly to monitor growth."
+                ]
+            if label == "Debt-to-Income":
+                return (
+                    "Your *debt is taking a big chunk of your income*." if score < 40 else
+                    "You're *managing debt moderately well*, but aim to lower it further." if score < 70 else
+                    "Your *debt load is well-managed*."
+                ), [
+                    "Pay down high-interest debts first.",
+                    "Avoid taking on new unnecessary credit obligations.",
+                    "Increase income to improve your ratio."
+                ]
+            if label == "Savings Rate":
+                return (
+                    "You're *saving very little* monthly." if score < 40 else
+                    "Your *savings rate is okay*, but can be improved." if score < 70 else
+                    "You're *saving consistently and strongly*."
+                ), [
+                    "Automate savings transfers if possible.",
+                    "Set a target of saving at least 20% of income.",
+                    "Review expenses to increase what's saved."
+                ]
+            if label == "Investment":
+                return (
+                    "You're *not investing much yet*." if score < 40 else
+                    "You're *starting to invest*; try to boost it." if score < 70 else
+                    "You're *investing well* and building wealth."
+                ), [
+                    "Start small and invest regularly.",
+                    "Diversify your portfolio for stability.",
+                    "Aim for long-term investing over short-term speculation."
+                ]
+            if label == "Emergency Fund":
+                return (
+                    "You have *less than 1 month saved* for emergencies." if score < 40 else
+                    "You're *halfway to a full emergency buffer*." if score < 70 else
+                    "✅ Your *emergency fund is solid*."
+                ), [
+                    "Build up to 3–6 months of essential expenses.",
+                    "Keep it liquid and easily accessible.",
+                    "Set a monthly auto-save amount."
+                ]
 
-# ===============================
-# MAIN APPLICATION
-# ===============================
+def generate_text_report(fhi_score, components, user_data):
+    """Generate a text report for download"""
+    report = f"""
+FYNSTRA FINANCIAL HEALTH REPORT
+Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+===========================================
+OVERALL FINANCIAL HEALTH INDEX (FHI): {fhi_score}/100
+===========================================
+
+USER PROFILE:
+Age: {user_data['age']} years
+Monthly Income: ₱{user_data['income']:,.2f}
+Monthly Expenses: ₱{user_data['expenses']:,.2f}
+Monthly Savings: ₱{user_data['savings']:,.2f}
+
+COMPONENT BREAKDOWN:
+"""
+    
+    for component, score in components.items():
+        report += f"\n{component}: {score:.1f}/100"
+        
+    report += f"""
+
+RECOMMENDATIONS:
+- Focus on improving components scoring below 60
+- Maintain consistency in savings and investments
+- Review and adjust your financial strategy regularly
+
+This report was generated by Fynstra AI - Your Financial Strategy Platform
+"""
+    
+    return report
+
 
 # Page config
 st.set_page_config(page_title="Fynstra – Financial Health Index", layout="centered")
 
-# Load user data if signed in
+# Load user data if signed in - moved to happen BEFORE any input rendering
 user_signed_in = st.session_state.get("user_id") is not None
 if user_signed_in:
+    # Force reload data every time to ensure we have latest
     if "force_reload" not in st.session_state:
         st.session_state["force_reload"] = True
         
     if st.session_state.get("force_reload", False):
         if load_user_financial_data():
             st.session_state["force_reload"] = False
+            # Clear any existing status flags to ensure fresh load
             for key in list(st.session_state.keys()):
                 if key.endswith("_status"):
                     del st.session_state[key]
@@ -864,6 +566,7 @@ if user_signed_in:
             if st.session_state.get("FHI"):
                 st.markdown(f"**📊 Last FHI Score:** {st.session_state['FHI']}/100")
             
+            # Show data status
             has_saved_data = any(st.session_state.get(key, 0) > 0 for key in 
                                ["age", "monthly_income", "monthly_expenses", "monthly_savings"])
             if has_saved_data:
@@ -875,30 +578,23 @@ if user_signed_in:
                 st.rerun()
         with col3:
             if st.button("🔄 Reset Form", help="Clear all inputs and start fresh"):
+                # Clear all financial input keys and status keys
                 keys_to_clear = [
                     "age", "monthly_income", "monthly_expenses", "monthly_savings", 
                     "monthly_debt", "total_investments", "net_worth", "emergency_fund", 
                     "FHI", "life_stage", "other_stage_input", "proceed", "force_reload"
                 ]
                 
+                # Also clear status keys
                 status_keys = [f"{key}_status" for key in keys_to_clear]
                 
                 for key in keys_to_clear + status_keys:
                     if key in st.session_state:
                         del st.session_state[key]
-                
-                st.session_state["age"] = 18.0
-                st.session_state["monthly_income"] = 0.0
-                st.session_state["monthly_expenses"] = 0.0
-                st.session_state["monthly_savings"] = 0.0
-                st.session_state["monthly_debt"] = 0.0
-                st.session_state["total_investments"] = 0.0
-                st.session_state["net_worth"] = 0.0
-                st.session_state["emergency_fund"] = 0.0
-                st.session_state["life_stage"] = "Student"
                         
+                # Set force reload flag for next visit
                 st.session_state["force_reload"] = True
-                st.success("🔄 Form reset! All inputs cleared.")
+                st.success("🔄 Form reset! Data will reload on next visit.")
                 st.rerun()
 else:
     with st.container(border=True):
@@ -913,10 +609,10 @@ with st.container(border=True):
     color: white;
     padding: 4px 12px;
     border-radius: 6px;
-    text-align: center;
+    text-align: center;       /* centers the text */
     font-size: 20px;
     font-weight: 400;
-    margin-bottom: 20px;
+    margin-bottom: 20px;  /* space below */
 ">
     Calculate your FHI Score
 </div>
@@ -932,16 +628,23 @@ with st.container(border=True):
 
     col1, col2 = st.columns(2)
     with col1:
-        age = validated_number_input("Your Age", key="age", min_value=18.0, step=1.0)
-        monthly_expenses = validated_number_input("Monthly Living Expenses (₱)", key="monthly_expenses", step=50.0)
-        monthly_savings = validated_number_input("Monthly Savings (₱)", key="monthly_savings", step=50.0)
-        emergency_fund = validated_number_input("Emergency Fund Amount (₱)", key="emergency_fund", step=500.0)
+        age = validated_number_input("Your Age", key="age", min_value=18.0, step=1.0, help_text="Your current age in years.")
+        monthly_expenses = validated_number_input("Monthly Living Expenses (₱)", key="monthly_expenses", step=50.0,
+                                                help_text="E.g., rent, food, transportation, utilities.")
+        monthly_savings = validated_number_input("Monthly Savings (₱)", key="monthly_savings", step=50.0,
+                                                help_text="The amount saved monthly.")
+        emergency_fund = validated_number_input("Emergency Fund Amount (₱)", key="emergency_fund", step=500.0,
+                                                help_text="For medical costs, job loss, or other emergencies.")
 
     with col2:
-        monthly_income = validated_number_input("Monthly Gross Income (₱)", key="monthly_income", step=100.0)
-        monthly_debt = validated_number_input("Monthly Debt Payments (₱)", key="monthly_debt", step=50.0)
-        total_investments = validated_number_input("Total Investments (₱)", key="total_investments", step=500.0)
-        net_worth = validated_number_input("Net Worth (₱)", key="net_worth", step=500.0)
+        monthly_income = validated_number_input("Monthly Gross Income (₱)", key="monthly_income", step=100.0,
+                                                help_text="Income before taxes and deductions.")
+        monthly_debt = validated_number_input("Monthly Debt Payments (₱)", key="monthly_debt", step=50.0,
+                                            help_text="Loans, credit cards, etc.")
+        total_investments = validated_number_input("Total Investments (₱)", key="total_investments", step=500.0,
+                                                help_text="Stocks, bonds, retirement accounts.")
+        net_worth = validated_number_input("Net Worth (₱)", key="net_worth", step=500.0,
+                                        help_text="Total assets minus total liabilities.")
 
 with st.container(border=True):
     st.markdown("""
@@ -951,10 +654,10 @@ with st.container(border=True):
         color: white;
         padding: 4px 12px;
         border-radius: 6px;
-        text-align: center;
+        text-align: center;       /* centers the text */
         font-size: 20px;
         font-weight: 400;
-        margin-bottom: 20px;
+        margin-bottom: 20px;  /* space below */
     ">
         Describe your Current Life Stage
     </div>
@@ -971,12 +674,15 @@ with st.container(border=True):
     ]
     st.markdown("""
 <style>
+/* Radio button label text color */
 [data-baseweb="radio"] label span {
-    color: #ff5f1f;
+    color: #ff5f1f;  /* default text */
 }
+
 </style>
 """, unsafe_allow_html=True)
 
+    # Get default life stage from session state
     default_stage_index = 0
     if "life_stage" in st.session_state and st.session_state["life_stage"] in life_stages:
         default_stage_index = life_stages.index(st.session_state["life_stage"])
@@ -1010,6 +716,7 @@ def missing_fields_popup(missing_fields):
 # FHI calculation logic
 st.markdown("""
 <style>
+/* Gradient button style */
 [data-testid="stButton"] button {
     background: linear-gradient(90deg, #fc3134, #ff5f1f, #ffc542 );
     color: white;
@@ -1020,10 +727,12 @@ st.markdown("""
     transition: all 0.3s ease;
 }
 
+/* Hover effect */
 [data-testid="stButton"] button:hover {
     filter: brightness(1.1);
 }
 
+/* Active / clicked effect */
 [data-testid="stButton"] button:active {
     transform: scale(0.98);
 }
@@ -1031,6 +740,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 if st.button("Check My Financial Health"):
+    # Track missing fields
     missing_fields = []
     if monthly_income == 0: missing_fields.append("Monthly Income")
     if monthly_expenses == 0: missing_fields.append("Monthly Expenses")
@@ -1041,11 +751,12 @@ if st.button("Check My Financial Health"):
     if monthly_debt == 0.00: missing_fields.append("Monthly Debt Payments")
 
     if missing_fields:
-        missing_fields_popup(missing_fields)
+        missing_fields_popup(missing_fields)   # Show popup
     else:
-        st.session_state['proceed'] = True
+        st.session_state['proceed'] = True      # All good → calculate
 
-# Run FHI calculation if allowed
+
+# --- Only run FHI calc if allowed ---
 if st.session_state.get('proceed'):
     if monthly_income == 0 or monthly_expenses == 0:
         st.warning("Please input your income and expenses.")
@@ -1080,23 +791,6 @@ if st.session_state.get('proceed'):
         # Final FHI Score
         FHI = 0.20 * Nworth + 0.15 * DTI + 0.15 * Srate + 0.15 * Invest + 0.20 * Emerg + 15
         FHI_rounded = round(FHI, 2)
-        
-        # Store results in session state
-        st.session_state["fhi_results"] = {
-            "FHI": FHI_rounded,
-            "components": components,
-            "user_inputs": {
-                "age": age,
-                "income": monthly_income,
-                "expenses": monthly_expenses,
-                "savings": monthly_savings,
-                "debt": monthly_debt,
-                "total_investments": total_investments,
-                "net_worth": net_worth,
-                "emergency_fund": emergency_fund
-            }
-        }
-        
         st.markdown("---")
         
         # Gauge Chart
@@ -1119,7 +813,7 @@ if st.session_state.get('proceed'):
         st.session_state["FHI"] = FHI_rounded
         st.session_state["current_savings"] = monthly_savings
 
-        # Save to database if user is signed in
+        # Save to database immediately after calculation if user is signed in
         if user_signed_in:
             try:
                 if save_user_financial_data():
@@ -1192,6 +886,7 @@ if st.session_state.get('proceed'):
         for i, (label, score) in enumerate(components.items()):
             with (col1 if i % 2 == 0 else col2):
                 with st.container(border=True):
+                    # Use the more descriptive help text
                     help_text = component_descriptions.get(label, "Higher is better.")
                     st.markdown(f"*{label} Score:* {round(score)} / 100", help=help_text)
 
@@ -1205,6 +900,7 @@ if st.session_state.get('proceed'):
         # Peer comparison
         st.subheader("👥 How You Compare")
             
+        # Simulated peer data
         peer_averages = {
             "18-25": {"FHI": 45, "Savings Rate": 15, "Emergency Fund": 35},
             "26-35": {"FHI": 55, "Savings Rate": 18, "Emergency Fund": 55},
@@ -1225,59 +921,20 @@ if st.session_state.get('proceed'):
             st.metric("Your Emergency Fund", f"{components['Emergency Fund']:.0f}%", 
                      f"{components['Emergency Fund'] - peer_data['Emergency Fund']:+.0f}% vs peers")
             
-        # Generate Report Section
-        st.subheader("📄 Download Your Report")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # Text Report
-            if st.button("📄 Generate Text Report", use_container_width=True):
-                report = generate_text_report(FHI_rounded, components, {
-                    "age": age,
-                    "income": monthly_income,
-                    "expenses": monthly_expenses,
-                    "savings": monthly_savings
-                })
-                st.download_button(
-                    label="⬇️ Download Text Report",
-                    data=report,
-                    file_name=f"fynstra_report_{datetime.now().strftime('%Y%m%d')}.txt",
-                    mime="text/plain",
-                    use_container_width=True
-                )
-        
-        with col2:
-            # PDF Report
-            if PDF_AVAILABLE:
-                if st.button("📄 Generate PDF Report", use_container_width=True):
-                    with st.spinner("Generating PDF report..."):
-                        try:
-                            pdf_data = generate_fynstra_pdf(
-                                FHI_rounded, 
-                                components, 
-                                {
-                                    "age": age,
-                                    "income": monthly_income,
-                                    "expenses": monthly_expenses,
-                                    "savings": monthly_savings,
-                                    "debt": monthly_debt,
-                                    "total_investments": total_investments,
-                                    "net_worth": net_worth,
-                                    "emergency_fund": emergency_fund
-                                }
-                            )
-                            st.download_button(
-                                label="⬇️ Download PDF Report",
-                                data=pdf_data,
-                                file_name=f"fynstra_report_{datetime.now().strftime('%Y%m%d')}.pdf",
-                                mime="application/pdf",
-                                use_container_width=True
-                            )
-                        except Exception as e:
-                            st.error(f"Failed to generate PDF: {e}")
-            else:
-                st.button("📄 PDF Not Available", disabled=True, help="Install reportlab to enable PDF generation", use_container_width=True)
+        # Download report
+        if st.button("📄 Generate Report"):
+            report = generate_text_report(FHI_rounded, components, {
+                "age": age,
+                "income": monthly_income,
+                "expenses": monthly_expenses,
+                "savings": monthly_savings
+               })
+            st.download_button(
+                label="Download Financial Health Report",
+                data=report,
+                file_name=f"fynstra_report_{datetime.now().strftime('%Y%m%d')}.txt",
+                mime="text/plain"
+           )
 
 st.markdown("---")
 
