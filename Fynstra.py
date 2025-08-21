@@ -1267,7 +1267,6 @@ if st.session_state.get('proceed'):
                                     "emergency_fund": emergency_fund
                                 }
                             )
-                            st.success("✅ PDF report generated successfully!")
                             st.download_button(
                                 label="⬇️ Download PDF Report",
                                 data=pdf_data,
