@@ -54,6 +54,197 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+# Add function to load user data
+def load_user_financial_data():
+    """Load user's financial data if they are signed in"""
+    try:
+        # Import here to avoid issues if auth modules aren't available
+        from supabase import create_client
+        import gspread
+        from google.oauth2.service_account import Credentials
+        
+        # Check if user is authenticated
+        user_id = st.session_state.get("user_id")
+        if not user_id:
+            return False
+            
+        # Initialize Supabase client
+        try:
+            url = st.secrets.get("SUPABASE_URL")
+            key = st.secrets.get("SUPABASE_ANON_KEY")
+            if not url or not key:
+                return False
+            supabase = create_client(url, key)
+        except:
+            return False
+            
+        # Initialize Google Sheets client
+        try:
+            sa_info = dict(st.secrets["GOOGLE_SERVICE_ACCOUNT"])
+            scopes = [
+                "https://www.googleapis.com/auth/spreadsheets",
+                "https://www.googleapis.com/auth/drive",
+            ]
+            creds = Credentials.from_service_account_info(sa_info, scopes=scopes)
+            gc = gspread.authorize(creds)
+            sh = gc.open_by_key(st.secrets["SHEET_ID"])
+            ws = sh.worksheet("Users")
+        except:
+            return False
+            
+        # Get user data from Google Sheets
+        try:
+            values = ws.get_all_values()
+            if not values:
+                return False
+                
+            header = values[0]
+            rows = values[1:] if len(values) > 1 else []
+            
+            # Find user row
+            if "user_id" not in header:
+                return False
+                
+            uid_idx = header.index("user_id")
+            user_row = None
+            
+            for row in rows:
+                if len(row) > uid_idx and row[uid_idx] == user_id:
+                    user_row = row
+                    break
+                    
+            if not user_row:
+                return False
+                
+            # Map data to session state with safe defaults
+            field_mapping = {
+                "age": "age",
+                "monthly_income": "monthly_income", 
+                "monthly_expenses": "monthly_expenses",
+                "monthly_savings": "monthly_savings",
+                "monthly_debt": "monthly_debt",
+                "total_investments": "total_investments",
+                "net_worth": "net_worth",
+                "emergency_fund": "emergency_fund",
+                "last_FHI": "FHI"
+            }
+            
+            for sheet_col, session_key in field_mapping.items():
+                if sheet_col in header:
+                    col_idx = header.index(sheet_col)
+                    if len(user_row) > col_idx and user_row[col_idx]:
+                        try:
+                            # Convert to appropriate type
+                            if session_key == "age":
+                                st.session_state[session_key] = int(float(user_row[col_idx]))
+                            else:
+                                st.session_state[session_key] = float(user_row[col_idx])
+                        except (ValueError, TypeError):
+                            # Keep default if conversion fails
+                            pass
+                            
+            return True
+            
+        except Exception as e:
+            st.error(f"Error loading user data: {e}")
+            return False
+            
+    except ImportError:
+        # Auth modules not available
+        return False
+    except Exception as e:
+        # Other errors
+        return False
+
+def save_user_financial_data():
+    """Save user's financial data to the database"""
+    try:
+        from supabase import create_client
+        import gspread
+        from google.oauth2.service_account import Credentials
+        import time
+        import random
+        
+        user_id = st.session_state.get("user_id")
+        if not user_id:
+            return False
+            
+        # Prepare data to save
+        data_to_save = {
+            "age": st.session_state.get("age", 0),
+            "monthly_income": st.session_state.get("monthly_income", 0),
+            "monthly_expenses": st.session_state.get("monthly_expenses", 0), 
+            "monthly_savings": st.session_state.get("monthly_savings", 0),
+            "monthly_debt": st.session_state.get("monthly_debt", 0),
+            "total_investments": st.session_state.get("total_investments", 0),
+            "net_worth": st.session_state.get("net_worth", 0),
+            "emergency_fund": st.session_state.get("emergency_fund", 0),
+            "last_FHI": st.session_state.get("FHI", 0)
+        }
+        
+        # Initialize Google Sheets
+        try:
+            sa_info = dict(st.secrets["GOOGLE_SERVICE_ACCOUNT"])
+            scopes = [
+                "https://www.googleapis.com/auth/spreadsheets",
+                "https://www.googleapis.com/auth/drive",
+            ]
+            creds = Credentials.from_service_account_info(sa_info, scopes=scopes)
+            gc = gspread.authorize(creds)
+            sh = gc.open_by_key(st.secrets["SHEET_ID"])
+            ws = sh.worksheet("Users")
+        except:
+            return False
+            
+        # Update user row with financial data
+        try:
+            values = ws.get_all_values()
+            if not values:
+                return False
+                
+            header = values[0]
+            rows = values[1:] if len(values) > 1 else []
+            
+            # Find user row
+            if "user_id" not in header:
+                return False
+                
+            uid_idx = header.index("user_id")
+            user_row_idx = None
+            
+            for i, row in enumerate(rows, start=2):  # Start at 2 because of header
+                if len(row) > uid_idx and row[uid_idx] == user_id:
+                    user_row_idx = i
+                    break
+                    
+            if not user_row_idx:
+                return False
+                
+            # Update each field
+            def with_backoff(fn, tries: int = 3):
+                for i in range(tries):
+                    try:
+                        return fn()
+                    except Exception as e:
+                        if i == tries - 1:
+                            raise
+                        time.sleep((2 ** i) + random.random())
+                        
+            for field, value in data_to_save.items():
+                if field in header:
+                    col_idx = header.index(field) + 1  # +1 for 1-based indexing
+                    with_backoff(lambda: ws.update_cell(user_row_idx, col_idx, str(value)))
+                    
+            return True
+            
+        except Exception as e:
+            st.error(f"Error saving data: {e}")
+            return False
+            
+    except ImportError:
+        return False
+    except Exception:
+        return False
 
 def validated_number_input(label, key, min_value=0.0, step=1.0, help_text=None, **kwargs):
     def update_status():
@@ -63,8 +254,11 @@ def validated_number_input(label, key, min_value=0.0, step=1.0, help_text=None, 
     if f"{key}_status" not in st.session_state:
         st.session_state[f"{key}_status"] = "⬜️"
 
-    # ✅ + Label + ⓘ tooltip forced inline
-    help_html = f"<span style='cursor: help; color: #1f77b4;' title='{help_text}'> ⓘ</span>" if help_text else ""
+    # Get default value from session state if available
+    default_value = st.session_state.get(key, kwargs.get("value", min_value))
+
+    # ✅ + Label + ❓ tooltip forced inline
+    help_html = f"<span style='cursor: help; color: #1f77b4;' title='{help_text}'> ❓</span>" if help_text else ""
     st.markdown(
         f"""
             <div style='display:flex; align-items:center; gap:6px; font-size:14px; margin-bottom:2px;'>
@@ -76,14 +270,15 @@ def validated_number_input(label, key, min_value=0.0, step=1.0, help_text=None, 
             unsafe_allow_html=True
     )
 
-    # Input box below
+    # Input box below with default value
     value = st.number_input(
         label="",
         min_value=min_value,
         step=step,
         key=key,
         on_change=update_status,
-        **kwargs
+        value=default_value,
+        **{k: v for k, v in kwargs.items() if k != "value"}
     )
 
     # Update check status initially
@@ -169,7 +364,7 @@ def interpret(label, score):
             if label == "Emergency Fund":
                 return (
                     "You have *less than 1 month saved* for emergencies." if score < 40 else
-                    "You’re *halfway to a full emergency buffer*." if score < 70 else
+                    "You're *halfway to a full emergency buffer*." if score < 70 else
                     "✅ Your *emergency fund is solid*."
                 ), [
                     "Build up to 3–6 months of essential expenses.",
@@ -177,10 +372,52 @@ def interpret(label, score):
                     "Set a monthly auto-save amount."
                 ]
 
+def generate_text_report(fhi_score, components, user_data):
+    """Generate a text report for download"""
+    report = f"""
+FYNSTRA FINANCIAL HEALTH REPORT
+Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+===========================================
+OVERALL FINANCIAL HEALTH INDEX (FHI): {fhi_score}/100
+===========================================
+
+USER PROFILE:
+Age: {user_data['age']} years
+Monthly Income: ₱{user_data['income']:,.2f}
+Monthly Expenses: ₱{user_data['expenses']:,.2f}
+Monthly Savings: ₱{user_data['savings']:,.2f}
+
+COMPONENT BREAKDOWN:
+"""
+    
+    for component, score in components.items():
+        report += f"\n{component}: {score:.1f}/100"
+        
+    report += f"""
+
+RECOMMENDATIONS:
+- Focus on improving components scoring below 60
+- Maintain consistency in savings and investments
+- Review and adjust your financial strategy regularly
+
+This report was generated by Fynstra AI - Your Financial Strategy Platform
+"""
+    
+    return report
+
 
 # Page config
 st.set_page_config(page_title="Fynstra – Financial Health Index", layout="centered")
 
+# Load user data if signed in
+user_signed_in = st.session_state.get("user_id") is not None
+if user_signed_in and "data_loaded" not in st.session_state:
+    if load_user_financial_data():
+        st.session_state["data_loaded"] = True
+        # Show a brief success message
+        with st.container():
+            st.success("✅ Welcome back! Your previous financial data has been loaded.")
 
 # Title and header
 st.markdown(
@@ -199,9 +436,34 @@ st.markdown(
 )
 st.markdown("""
 <p style='font-size:20px; color:#333; line-height:1.5;'>
-Fynstra is your AI-powered financial advisor and simulation tool. Whether you’re new to managing money or already experienced, the platform makes financial planning accessible, insightful, and actionable.
+Fynstra is your AI-powered financial advisor and simulation tool. Whether you're new to managing money or already experienced, the platform makes financial planning accessible, insightful, and actionable.
 </p>
 """, unsafe_allow_html=True)
+
+# Show user status
+if user_signed_in:
+    user_email = st.session_state.get("email", "")
+    display_name = st.session_state.get("display_name", "User")
+    
+    with st.container(border=True):
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.markdown(f"**👤 Signed in as:** {display_name} ({user_email})")
+            if st.session_state.get("FHI"):
+                st.markdown(f"**📊 Last FHI Score:** {st.session_state['FHI']}/100")
+        with col2:
+            if st.button("🔄 Reset Form", help="Clear all inputs and start fresh"):
+                # Clear all financial input keys
+                keys_to_clear = ["age", "monthly_income", "monthly_expenses", "monthly_savings", 
+                               "monthly_debt", "total_investments", "net_worth", "emergency_fund", 
+                               "FHI", "data_loaded"]
+                for key in keys_to_clear:
+                    if key in st.session_state:
+                        del st.session_state[key]
+                st.rerun()
+else:
+    with st.container(border=True):
+        st.info("💡 **Sign in** to save your financial data and access personalized features! Visit the **User Account** page to create an account or sign in.")
 
 # Form input container
 with st.container(border=True):
@@ -232,21 +494,21 @@ with st.container(border=True):
     col1, col2 = st.columns(2)
     with col1:
         age = validated_number_input("Your Age", key="age", min_value=18, step=1, help="Your current age in years.")
-        monthly_expenses = validated_number_input("Monthly Living Expenses (₱)", key="expenses", step=50.0,
+        monthly_expenses = validated_number_input("Monthly Living Expenses (₱)", key="monthly_expenses", step=50.0,
                                                 help="E.g., rent, food, transportation, utilities.")
-        monthly_savings = validated_number_input("Monthly Savings (₱)", key="savings", step=50.0,
+        monthly_savings = validated_number_input("Monthly Savings (₱)", key="monthly_savings", step=50.0,
                                                 help="The amount saved monthly.")
-        emergency_fund = validated_number_input("Emergency Fund Amount (₱)", key="emergency", step=500.0,
+        emergency_fund = validated_number_input("Emergency Fund Amount (₱)", key="emergency_fund", step=500.0,
                                                 help="For medical costs, job loss, or other emergencies.")
 
     with col2:
-        monthly_income = validated_number_input("Monthly Gross Income (₱)", key="income", step=100.0,
+        monthly_income = validated_number_input("Monthly Gross Income (₱)", key="monthly_income", step=100.0,
                                                 help="Income before taxes and deductions.")
-        monthly_debt = validated_number_input("Monthly Debt Payments (₱)", key="debt", step=50.0,
+        monthly_debt = validated_number_input("Monthly Debt Payments (₱)", key="monthly_debt", step=50.0,
                                             help="Loans, credit cards, etc.")
-        total_investments = validated_number_input("Total Investments (₱)", key="investments", step=500.0,
+        total_investments = validated_number_input("Total Investments (₱)", key="total_investments", step=500.0,
                                                 help="Stocks, bonds, retirement accounts.")
-        net_worth = validated_number_input("Net Worth (₱)", key="networth", step=500.0,
+        net_worth = validated_number_input("Net Worth (₱)", key="net_worth", step=500.0,
                                         help="Total assets minus total liabilities.")
 
 with st.container(border=True):
@@ -285,13 +547,20 @@ with st.container(border=True):
 </style>
 """, unsafe_allow_html=True)
 
-    selected_stage = st.radio("Select your life stage:", life_stages, index=0, horizontal=False)
+    # Get default life stage from session state
+    default_stage_index = 0
+    if "life_stage" in st.session_state and st.session_state["life_stage"] in life_stages:
+        default_stage_index = life_stages.index(st.session_state["life_stage"])
+
+    selected_stage = st.radio("Select your life stage:", life_stages, index=default_stage_index, horizontal=False)
 
     other_stage = ""
     if selected_stage == "Other":
-        other_stage = st.text_input("Please specify:", key="other_stage_input")
+        other_stage = st.text_input("Please specify:", key="other_stage_input", 
+                                   value=st.session_state.get("life_stage", "") if st.session_state.get("life_stage") not in life_stages else "")
 
     st.session_state["life_stage"] = other_stage if selected_stage == "Other" else selected_stage
+
 @st.dialog("⚠️ Missing Information")
 def missing_fields_popup(missing_fields):
     st.write(
@@ -388,6 +657,7 @@ if st.session_state.get('proceed'):
         FHI = 0.20 * Nworth + 0.15 * DTI + 0.15 * Srate + 0.15 * Invest + 0.20 * Emerg + 15
         FHI_rounded = round(FHI, 2)
         st.markdown("---")
+        
         # Gauge Chart
         fig = go.Figure(go.Indicator(
             mode="gauge+number",
@@ -404,10 +674,16 @@ if st.session_state.get('proceed'):
             }
         ))
 
+        # Update session state
         st.session_state["FHI"] = FHI_rounded
-        st.session_state["monthly_income"] = monthly_income
-        st.session_state["monthly_expenses"] = monthly_expenses
         st.session_state["current_savings"] = monthly_savings
+
+        # Save to database if user is signed in
+        if user_signed_in:
+            if save_user_financial_data():
+                st.success("💾 Your financial data has been saved!")
+            else:
+                st.warning("⚠️ Could not save your data, but calculation is complete.")
 
         fig.update_layout(height=300, margin=dict(t=20, b=20))
         score_col, text_col = st.columns([1, 2])
@@ -444,13 +720,13 @@ if st.session_state.get('proceed'):
 
             # Final output based on FHI
             if FHI >= 85:
-                st.success(f"🎯 Excellent! You’re in great financial shape and well-prepared for the future.{weak_text}")
+                st.success(f"🎯 Excellent! You're in great financial shape and well-prepared for the future.{weak_text}")
             elif FHI >= 70:
                 st.info(f"🟢 Good! You have a solid foundation. Stay consistent and work on gaps where needed.{weak_text}")
             elif FHI >= 50:
-                st.warning(f"🟡 Fair. You’re on your way, but some areas need attention to build a stronger safety net.{weak_text}")
+                st.warning(f"🟡 Fair. You're on your way, but some areas need attention to build a stronger safety net.{weak_text}")
             else:
-                st.error(f"🔴 Needs Improvement. Your finances require urgent attention — prioritize stabilizing your income, debt, and savings.{weak_text}")
+                st.error(f"🔴 Needs Improvement. Your finances require urgent attention – prioritize stabilizing your income, debt, and savings.{weak_text}")
 
         # Component radar chart
         st.subheader("📈 FHI Breakdown")
@@ -458,15 +734,14 @@ if st.session_state.get('proceed'):
         st.plotly_chart(radar_fig, use_container_width=True)
 
         # Component interpretations
-
         st.subheader("📊 FHI Interpretation")
 
         component_descriptions = {
-            "Net Worth": "Your assets minus liabilities — shows your financial position. Higher is better.",
+            "Net Worth": "Your assets minus liabilities – shows your financial position. Higher is better.",
             "Debt-to-Income (DTI)": "Proportion of income used to pay debts. Lower is better.",
             "Savings Rate": "How much of your income you save. Higher is better.",
             "Investment Allocation": "Proportion of assets invested for growth. Higher means better long-term potential.",
-            "Emergency Fund": "Covers how well you’re protected in financial emergencies. Higher is better."
+            "Emergency Fund": "Covers how well you're protected in financial emergencies. Higher is better."
         }
 
         col1, col2 = st.columns(2)
@@ -484,7 +759,7 @@ if st.session_state.get('proceed'):
                         for tip in suggestions:
                             st.write(f"- {tip}")
 
-# Peer comparison
+        # Peer comparison
         st.subheader("👥 How You Compare")
             
         # Simulated peer data
@@ -508,7 +783,7 @@ if st.session_state.get('proceed'):
             st.metric("Your Emergency Fund", f"{components['Emergency Fund']:.0f}%", 
                      f"{components['Emergency Fund'] - peer_data['Emergency Fund']:+.0f}% vs peers")
             
-            # Download report
+        # Download report
         if st.button("📄 Generate Report"):
             report = generate_text_report(FHI_rounded, components, {
                 "age": age,
@@ -522,14 +797,14 @@ if st.session_state.get('proceed'):
                 file_name=f"fynstra_report_{datetime.now().strftime('%Y%m%d')}.txt",
                 mime="text/plain"
            )
+
 st.markdown("---")
 
-# Container for FYNnyx CTA
-# Container for FYNnyx CTA
+# Container for FYNyx CTA
 with st.container():
     st.markdown("### 💬 Want more personalized financial advice?")
     st.markdown(
-        "FYNnyx, our AI-powered financial assistant, can give you **tailored recommendations** "
+        "FYNyx, our AI-powered financial assistant, can give you **tailored recommendations** "
         "based on your inputs. You can visit it via the **tabs on the sidebar** to explore more."
     )
 
