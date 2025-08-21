@@ -366,13 +366,12 @@ def validated_number_input(label, key, min_value=0.0, step=1.0, help_text=None, 
     else:
         default_value = float(min_value)
 
-    help_html = f"<span style='cursor: help; color: #1f77b4;' title='{help_text}'>" if help_text else ""
+    # ✅ + Label without help tooltip
     st.markdown(
         f"""
             <div style='display:flex; align-items:center; gap:6px; font-size:14px; margin-bottom:2px;'>
                 <span>{st.session_state[f'{key}_status']}</span>
                 <span>{label}</span>
-                {help_html}
             </div>
             """,
             unsafe_allow_html=True
@@ -591,10 +590,21 @@ if user_signed_in:
                 for key in keys_to_clear + status_keys:
                     if key in st.session_state:
                         del st.session_state[key]
+                
+                # Force all inputs to reset to default values
+                st.session_state["age"] = 18.0
+                st.session_state["monthly_income"] = 0.0
+                st.session_state["monthly_expenses"] = 0.0
+                st.session_state["monthly_savings"] = 0.0
+                st.session_state["monthly_debt"] = 0.0
+                st.session_state["total_investments"] = 0.0
+                st.session_state["net_worth"] = 0.0
+                st.session_state["emergency_fund"] = 0.0
+                st.session_state["life_stage"] = "Student"
                         
                 # Set force reload flag for next visit
                 st.session_state["force_reload"] = True
-                st.success("🔄 Form reset! Data will reload on next visit.")
+                st.success("🔄 Form reset! All inputs cleared.")
                 st.rerun()
 else:
     with st.container(border=True):
