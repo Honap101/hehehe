@@ -56,16 +56,23 @@ st.markdown(
 
 # Add function to load user data
 def load_user_financial_data():
-    """Load user's financial data if they are signed in"""
+    """Load user's financial data if they are signed in with rate limiting"""
     try:
         # Import here to avoid issues if auth modules aren't available
         from supabase import create_client
         import gspread
         from google.oauth2.service_account import Credentials
+        import time
         
         # Check if user is authenticated
         user_id = st.session_state.get("user_id")
         if not user_id:
+            return False
+        
+        # Rate limiting for loads too
+        last_load_time = st.session_state.get("last_load_time", 0)
+        current_time = time.time()
+        if current_time - last_load_time < 10:  # Wait at least 10 seconds between loads
             return False
             
         # Initialize Google Sheets client
@@ -80,10 +87,14 @@ def load_user_financial_data():
             sh = gc.open_by_key(st.secrets["SHEET_ID"])
             ws = sh.worksheet("Users")
         except Exception as e:
-            st.error(f"Failed to connect to database: {e}")
-            return False
+            if "429" in str(e) or "Quota exceeded" in str(e):
+                st.warning("⏳ API rate limit reached. Please try loading again in a few minutes.")
+                return False
+            else:
+                st.error(f"Failed to connect to database: {e}")
+                return False
             
-        # Get user data from Google Sheets
+        # Get user data from Google Sheets - SINGLE API CALL
         try:
             values = ws.get_all_values()
             if not values:
@@ -139,26 +150,34 @@ def load_user_financial_data():
                             # Keep default if conversion fails
                             pass
             
-            # Debug information (remove in production)
+            # Update load time
+            st.session_state["last_load_time"] = current_time
+            
+            # Success message (abbreviated)
             if loaded_fields:
-                st.success(f"✅ Loaded data: {', '.join(loaded_fields[:3])}{'...' if len(loaded_fields) > 3 else ''}")
+                st.success(f"✅ Loaded {len(loaded_fields)} fields from your saved data")
                             
             return len(loaded_fields) > 0
             
         except Exception as e:
-            st.error(f"Error loading user data: {e}")
+            if "429" in str(e) or "Quota exceeded" in str(e):
+                st.warning("⏳ API rate limit reached. Please try loading again in a few minutes.")
+            else:
+                st.error(f"Error loading user data: {e}")
             return False
             
     except ImportError:
         # Auth modules not available
         return False
     except Exception as e:
-        # Other errors
-        st.error(f"Unexpected error: {e}")
+        if "429" in str(e) or "Quota exceeded" in str(e):
+            st.warning("⏳ API rate limit reached. Please try again in a few minutes.")
+        else:
+            st.error(f"Unexpected error: {e}")
         return False
 
 def save_user_financial_data():
-    """Save user's financial data to the database"""
+    """Save user's financial data to the database with rate limiting"""
     try:
         from supabase import create_client
         import gspread
@@ -168,6 +187,13 @@ def save_user_financial_data():
         
         user_id = st.session_state.get("user_id")
         if not user_id:
+            return False
+            
+        # Check if we recently saved (rate limiting)
+        last_save_time = st.session_state.get("last_save_time", 0)
+        current_time = time.time()
+        if current_time - last_save_time < 30:  # Wait at least 30 seconds between saves
+            st.info("⏱️ Please wait before saving again (rate limiting)")
             return False
             
         # Prepare data to save with current input values
@@ -188,7 +214,7 @@ def save_user_financial_data():
         if not has_meaningful_data:
             return False
         
-        # Initialize Google Sheets
+        # Initialize Google Sheets with longer timeout
         try:
             sa_info = dict(st.secrets["GOOGLE_SERVICE_ACCOUNT"])
             scopes = [
@@ -200,11 +226,16 @@ def save_user_financial_data():
             sh = gc.open_by_key(st.secrets["SHEET_ID"])
             ws = sh.worksheet("Users")
         except Exception as e:
-            st.error(f"Failed to connect to database for saving: {e}")
-            return False
+            if "429" in str(e) or "Quota exceeded" in str(e):
+                st.warning("⏳ API rate limit reached. Your data will be saved automatically later. Please try again in a few minutes.")
+                return False
+            else:
+                st.error(f"Failed to connect to database for saving: {e}")
+                return False
             
-        # Update user row with financial data
+        # Update user row with financial data - SINGLE BATCH UPDATE to reduce API calls
         try:
+            # Get all data in one call
             values = ws.get_all_values()
             if not values:
                 return False
@@ -227,42 +258,62 @@ def save_user_financial_data():
             if not user_row_idx:
                 return False
                 
-            # Update each field with retry logic
-            def with_backoff(fn, tries: int = 3):
-                for i in range(tries):
-                    try:
-                        return fn()
-                    except Exception as e:
-                        if i == tries - 1:
-                            raise
-                        time.sleep((2 ** i) + random.random())
-                        
+            # Prepare batch update data
+            cells_to_update = []
             updated_fields = []
+            
             for field, value in data_to_save.items():
                 if field in header:
                     col_idx = header.index(field) + 1  # +1 for 1-based indexing
-                    try:
-                        with_backoff(lambda f=field, v=value, c=col_idx, r=user_row_idx: 
-                                   ws.update_cell(r, c, str(v)))
-                        updated_fields.append(f"{field}: {value}")
-                    except Exception as e:
-                        st.error(f"Failed to update {field}: {e}")
-                        
-            # Show what was saved (for debugging - remove in production)
-            if updated_fields:
-                st.info(f"Saved: {', '.join(updated_fields[:3])}{'...' if len(updated_fields) > 3 else ''}")
+                    cells_to_update.append({
+                        'range': f'{gspread.utils.rowcol_to_a1(user_row_idx, col_idx)}',
+                        'values': [[str(value)]]
+                    })
+                    updated_fields.append(f"{field}: {value}")
+            
+            # Single batch update instead of multiple individual updates
+            if cells_to_update:
+                def with_backoff(fn, tries: int = 3):
+                    for i in range(tries):
+                        try:
+                            return fn()
+                        except Exception as e:
+                            if "429" in str(e) or "Quota exceeded" in str(e):
+                                if i < tries - 1:
+                                    wait_time = (2 ** i) + random.uniform(5, 15)  # Longer wait for rate limits
+                                    time.sleep(wait_time)
+                                else:
+                                    raise
+                            else:
+                                if i == tries - 1:
+                                    raise
+                                time.sleep((2 ** i) + random.random())
+                
+                with_backoff(lambda: ws.batch_update(cells_to_update))
+                st.session_state["last_save_time"] = current_time
+                
+                # Show what was saved (abbreviated)
+                if updated_fields:
+                    st.info(f"💾 Saved {len(updated_fields)} fields successfully")
                     
             return len(updated_fields) > 0
             
         except Exception as e:
-            st.error(f"Error saving data: {e}")
-            return False
+            if "429" in str(e) or "Quota exceeded" in str(e):
+                st.warning("⏳ API rate limit reached. Please try saving again in a few minutes.")
+                return False
+            else:
+                st.error(f"Error saving data: {e}")
+                return False
             
     except ImportError:
         st.warning("Database connection not available")
         return False
     except Exception as e:
-        st.error(f"Unexpected error while saving: {e}")
+        if "429" in str(e) or "Quota exceeded" in str(e):
+            st.warning("⏳ API rate limit reached. Please try saving again in a few minutes.")
+        else:
+            st.error(f"Unexpected error while saving: {e}")
         return False
 
 def validated_number_input(label, key, min_value=0.0, step=1.0, help_text=None, **kwargs):
