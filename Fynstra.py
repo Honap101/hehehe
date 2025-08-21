@@ -170,7 +170,7 @@ def save_user_financial_data():
         if not user_id:
             return False
             
-        # Prepare data to save
+        # Prepare data to save with current input values
         data_to_save = {
             "age": st.session_state.get("age", 0),
             "monthly_income": st.session_state.get("monthly_income", 0),
@@ -183,6 +183,11 @@ def save_user_financial_data():
             "last_FHI": st.session_state.get("FHI", 0)
         }
         
+        # Only save if we have some meaningful data
+        has_meaningful_data = any(data_to_save[key] > 0 for key in data_to_save.keys() if key != "last_FHI")
+        if not has_meaningful_data:
+            return False
+        
         # Initialize Google Sheets
         try:
             sa_info = dict(st.secrets["GOOGLE_SERVICE_ACCOUNT"])
@@ -194,7 +199,8 @@ def save_user_financial_data():
             gc = gspread.authorize(creds)
             sh = gc.open_by_key(st.secrets["SHEET_ID"])
             ws = sh.worksheet("Users")
-        except:
+        except Exception as e:
+            st.error(f"Failed to connect to database for saving: {e}")
             return False
             
         # Update user row with financial data
@@ -221,7 +227,7 @@ def save_user_financial_data():
             if not user_row_idx:
                 return False
                 
-            # Update each field
+            # Update each field with retry logic
             def with_backoff(fn, tries: int = 3):
                 for i in range(tries):
                     try:
@@ -231,20 +237,32 @@ def save_user_financial_data():
                             raise
                         time.sleep((2 ** i) + random.random())
                         
+            updated_fields = []
             for field, value in data_to_save.items():
                 if field in header:
                     col_idx = header.index(field) + 1  # +1 for 1-based indexing
-                    with_backoff(lambda: ws.update_cell(user_row_idx, col_idx, str(value)))
+                    try:
+                        with_backoff(lambda f=field, v=value, c=col_idx, r=user_row_idx: 
+                                   ws.update_cell(r, c, str(v)))
+                        updated_fields.append(f"{field}: {value}")
+                    except Exception as e:
+                        st.error(f"Failed to update {field}: {e}")
+                        
+            # Show what was saved (for debugging - remove in production)
+            if updated_fields:
+                st.info(f"Saved: {', '.join(updated_fields[:3])}{'...' if len(updated_fields) > 3 else ''}")
                     
-            return True
+            return len(updated_fields) > 0
             
         except Exception as e:
             st.error(f"Error saving data: {e}")
             return False
             
     except ImportError:
+        st.warning("Database connection not available")
         return False
-    except Exception:
+    except Exception as e:
+        st.error(f"Unexpected error while saving: {e}")
         return False
 
 def validated_number_input(label, key, min_value=0.0, step=1.0, help_text=None, **kwargs):
@@ -464,6 +482,13 @@ if user_signed_in:
             st.markdown(f"**👤 Signed in as:** {display_name} ({user_email})")
             if st.session_state.get("FHI"):
                 st.markdown(f"**📊 Last FHI Score:** {st.session_state['FHI']}/100")
+            
+            # Show data status
+            has_saved_data = any(st.session_state.get(key, 0) > 0 for key in 
+                               ["age", "monthly_income", "monthly_expenses", "monthly_savings"])
+            if has_saved_data:
+                st.markdown("**💾 Status:** Data ready to save when you calculate FHI")
+            
         with col2:
             if st.button("📥 Load My Data", help="Reload your saved financial data"):
                 st.session_state["force_reload"] = True
@@ -705,12 +730,15 @@ if st.session_state.get('proceed'):
         st.session_state["FHI"] = FHI_rounded
         st.session_state["current_savings"] = monthly_savings
 
-        # Save to database if user is signed in
+        # Save to database immediately after calculation if user is signed in
         if user_signed_in:
-            if save_user_financial_data():
-                st.success("💾 Your financial data has been saved!")
-            else:
-                st.warning("⚠️ Could not save your data, but calculation is complete.")
+            try:
+                if save_user_financial_data():
+                    st.success("💾 Your financial data has been saved successfully!")
+                else:
+                    st.warning("⚠️ Could not save your data, but calculation is complete.")
+            except Exception as e:
+                st.warning(f"⚠️ Save failed: {str(e)}, but calculation is complete.")
 
         fig.update_layout(height=300, margin=dict(t=20, b=20))
         score_col, text_col = st.columns([1, 2])
