@@ -852,12 +852,6 @@ Fynstra is your AI-powered financial advisor and simulation tool. Whether you're
 </p>
 """, unsafe_allow_html=True)
 
-# Show PDF availability status
-if PDF_AVAILABLE:
-    st.success("📄 PDF report generation is available!")
-else:
-    st.warning("📄 PDF generation not available. Install reportlab: `pip install reportlab`")
-
 # Show user status
 if user_signed_in:
     user_email = st.session_state.get("email", "")
@@ -1273,7 +1267,6 @@ if st.session_state.get('proceed'):
                                     "emergency_fund": emergency_fund
                                 }
                             )
-                            st.success("✅ PDF report generated successfully!")
                             st.download_button(
                                 label="⬇️ Download PDF Report",
                                 data=pdf_data,
