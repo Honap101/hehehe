@@ -126,17 +126,15 @@ def load_user_financial_data():
                     col_idx = header.index(sheet_col)
                     if len(user_row) > col_idx and user_row[col_idx] and user_row[col_idx] != "0" and user_row[col_idx] != "":
                         try:
-                            # Convert to appropriate type
-                            if session_key == "age":
-                                value = int(float(user_row[col_idx]))
-                                if value > 0:  # Only load if positive
+                            # Convert to float first, then int for age if needed
+                            value = float(user_row[col_idx])
+                            if value >= 0:  # Load even if 0 for financial fields
+                                if session_key == "age":
+                                    # For age, convert to int but store as float to avoid type conflicts
+                                    st.session_state[session_key] = float(int(value))
+                                else:
                                     st.session_state[session_key] = value
-                                    loaded_fields.append(f"{sheet_col}: {value}")
-                            else:
-                                value = float(user_row[col_idx])
-                                if value >= 0:  # Load even if 0 for financial fields
-                                    st.session_state[session_key] = value
-                                    loaded_fields.append(f"{sheet_col}: {value}")
+                                loaded_fields.append(f"{sheet_col}: {value}")
                         except (ValueError, TypeError):
                             # Keep default if conversion fails
                             pass
@@ -258,10 +256,13 @@ def validated_number_input(label, key, min_value=0.0, step=1.0, help_text=None, 
         st.session_state[f"{key}_status"] = "⬜️"
 
     # Get default value from session state if available, otherwise use min_value
+    # Remove any 'value' from kwargs to avoid conflicts
+    kwargs_clean = {k: v for k, v in kwargs.items() if k != "value"}
+    
     if key in st.session_state and st.session_state[key] is not None:
         default_value = float(st.session_state[key])
     else:
-        default_value = kwargs.get("value", min_value)
+        default_value = float(min_value)
 
     # ✅ + Label + ❓ tooltip forced inline
     help_html = f"<span style='cursor: help; color: #1f77b4;' title='{help_text}'> ❓</span>" if help_text else ""
@@ -276,15 +277,15 @@ def validated_number_input(label, key, min_value=0.0, step=1.0, help_text=None, 
             unsafe_allow_html=True
     )
 
-    # Input box below with default value
+    # Input box below with default value - ensure all numeric types are consistent
     value = st.number_input(
         label="",
-        min_value=min_value,
-        step=step,
+        min_value=float(min_value),
+        step=float(step),
         key=key,
         on_change=update_status,
         value=default_value,
-        **{k: v for k, v in kwargs.items() if k != "value"}
+        **kwargs_clean
     )
 
     # Update check status initially
@@ -519,23 +520,23 @@ with st.container(border=True):
 
     col1, col2 = st.columns(2)
     with col1:
-        age = validated_number_input("Your Age", key="age", min_value=18, step=1, help="Your current age in years.")
+        age = validated_number_input("Your Age", key="age", min_value=18.0, step=1.0, help_text="Your current age in years.")
         monthly_expenses = validated_number_input("Monthly Living Expenses (₱)", key="monthly_expenses", step=50.0,
-                                                help="E.g., rent, food, transportation, utilities.")
+                                                help_text="E.g., rent, food, transportation, utilities.")
         monthly_savings = validated_number_input("Monthly Savings (₱)", key="monthly_savings", step=50.0,
-                                                help="The amount saved monthly.")
+                                                help_text="The amount saved monthly.")
         emergency_fund = validated_number_input("Emergency Fund Amount (₱)", key="emergency_fund", step=500.0,
-                                                help="For medical costs, job loss, or other emergencies.")
+                                                help_text="For medical costs, job loss, or other emergencies.")
 
     with col2:
         monthly_income = validated_number_input("Monthly Gross Income (₱)", key="monthly_income", step=100.0,
-                                                help="Income before taxes and deductions.")
+                                                help_text="Income before taxes and deductions.")
         monthly_debt = validated_number_input("Monthly Debt Payments (₱)", key="monthly_debt", step=50.0,
-                                            help="Loans, credit cards, etc.")
+                                            help_text="Loans, credit cards, etc.")
         total_investments = validated_number_input("Total Investments (₱)", key="total_investments", step=500.0,
-                                                help="Stocks, bonds, retirement accounts.")
+                                                help_text="Stocks, bonds, retirement accounts.")
         net_worth = validated_number_input("Net Worth (₱)", key="net_worth", step=500.0,
-                                        help="Total assets minus total liabilities.")
+                                        help_text="Total assets minus total liabilities.")
 
 with st.container(border=True):
     st.markdown("""
