@@ -1190,22 +1190,26 @@ if st.session_state.get('proceed'):
 
         component_descriptions = {
             "Net Worth": "Your assets minus liabilities – shows your financial position. Higher is better.",
-            "Debt-to-Income (DTI)": "Proportion of income used to pay debts. Lower is better.",
-            "Savings Rate": "How much of your income you save. Higher is better.",
-            "Investment Allocation": "Proportion of assets invested for growth. Higher means better long-term potential.",
-            "Emergency Fund": "Covers how well you're protected in financial emergencies. Higher is better."
+            "Debt-to-Income": "Share of income going to debt payments. Lower is better.",
+            "Savings Rate": "How much of your income you save monthly. Higher is better.",
+            "Investment": "Share/level of assets invested for long-term growth. Higher is better.",
+            "Emergency Fund": "How well you’re covered for unexpected events (target: 3–6 months). Higher is better."
         }
-
+        
         col1, col2 = st.columns(2)
         for i, (label, score) in enumerate(components.items()):
             with (col1 if i % 2 == 0 else col2):
                 with st.container(border=True):
-                    help_text = component_descriptions.get(label, "Higher is better.")
-                    st.markdown(f"*{label} Score:* {round(score)} / 100", help=help_text)
-
+                    st.markdown(f"**{label} Score:** {round(score)} / 100")
+                    # short help text under the header (Streamlit markdown has no `help` kwarg)
+                    st.caption(component_descriptions.get(label, "Higher is better."))
+        
                     interpretation, suggestions = interpret(label, score)
-                    st.markdown(f"<span style='font-size:13px; color:#444;'>{interpretation}</span>", unsafe_allow_html=True)
-
+                    st.markdown(
+                        f"<span style='font-size:13px; color:#444;'>{interpretation}</span>",
+                        unsafe_allow_html=True
+                    )
+        
                     with st.expander("💡 How to improve"):
                         for tip in suggestions:
                             st.write(f"- {tip}")
