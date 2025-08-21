@@ -201,15 +201,19 @@ def load_user_financial_data():
         return False
 
 def save_user_financial_data():
-    """Save user's financial data to the database with debugging"""
+    """Save user's financial data to the database with debugging and auto-create user row"""
     try:
         from supabase import create_client
         import gspread
         from google.oauth2.service_account import Credentials
         import time
         import random
+        from datetime import datetime
         
         user_id = st.session_state.get("user_id")
+        email = st.session_state.get("email", "")
+        display_name = st.session_state.get("display_name", "")
+        
         if not user_id:
             st.error("DEBUG: No user_id found for saving")
             return False
@@ -244,7 +248,7 @@ def save_user_financial_data():
             st.warning("DEBUG: No meaningful data to save (all values are 0)")
             return False
         
-        # Initialize Google Sheets with longer timeout
+        # Initialize Google Sheets
         try:
             sa_info = dict(st.secrets["GOOGLE_SERVICE_ACCOUNT"])
             scopes = [
@@ -264,9 +268,8 @@ def save_user_financial_data():
                 st.error(f"DEBUG: Failed to connect to database for saving: {e}")
                 return False
             
-        # Update user row with financial data - SINGLE BATCH UPDATE to reduce API calls
+        # Get all data and find/create user row
         try:
-            # Get all data in one call
             values = ws.get_all_values()
             if not values:
                 st.error("DEBUG: No data in spreadsheet for saving")
@@ -276,7 +279,6 @@ def save_user_financial_data():
             rows = values[1:] if len(values) > 1 else []
             
             st.info(f"DEBUG: Found {len(rows)} rows for saving")
-            st.info(f"DEBUG: Header for saving: {header}")
             
             # Find user row
             if "user_id" not in header:
@@ -289,14 +291,43 @@ def save_user_financial_data():
             for i, row in enumerate(rows, start=2):  # Start at 2 because of header
                 if len(row) > uid_idx and row[uid_idx] == user_id:
                     user_row_idx = i
-                    st.info(f"DEBUG: Found user row for saving at index {user_row_idx}")
+                    st.info(f"DEBUG: Found existing user row at index {user_row_idx}")
                     break
                     
+            # CREATE USER ROW if not found
             if not user_row_idx:
-                st.error(f"DEBUG: User row not found for saving. User ID: {user_id}")
-                return False
+                st.info(f"DEBUG: User row not found. Creating new row for user_id: {user_id}")
                 
-            # Prepare batch update data
+                # Prepare new user row data
+                now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                new_row_data = []
+                
+                for col in header:
+                    if col == "user_id":
+                        new_row_data.append(user_id)
+                    elif col == "email":
+                        new_row_data.append(email)
+                    elif col == "username":
+                        new_row_data.append(display_name)
+                    elif col == "created_at":
+                        new_row_data.append(now)
+                    elif col == "last_login":
+                        new_row_data.append(now)
+                    elif col in data_to_save:
+                        new_row_data.append(str(data_to_save[col]))
+                    else:
+                        new_row_data.append("")  # Empty for other columns
+                
+                # Add the new row
+                try:
+                    ws.append_row(new_row_data)
+                    user_row_idx = len(rows) + 2  # +2 because header is row 1, and we just added a row
+                    st.success(f"DEBUG: Successfully created new user row at index {user_row_idx}")
+                except Exception as e:
+                    st.error(f"DEBUG: Failed to create user row: {e}")
+                    return False
+            
+            # Update user row with financial data
             cells_to_update = []
             updated_fields = []
             
@@ -313,7 +344,7 @@ def save_user_financial_data():
                 else:
                     st.warning(f"DEBUG: Column '{field}' not found in header")
             
-            # Single batch update instead of multiple individual updates
+            # Batch update
             if cells_to_update:
                 def with_backoff(fn, tries: int = 3):
                     for i in range(tries):
@@ -322,7 +353,7 @@ def save_user_financial_data():
                         except Exception as e:
                             if "429" in str(e) or "Quota exceeded" in str(e):
                                 if i < tries - 1:
-                                    wait_time = (2 ** i) + random.uniform(5, 15)  # Longer wait for rate limits
+                                    wait_time = (2 ** i) + random.uniform(5, 15)
                                     st.info(f"DEBUG: Rate limited, waiting {wait_time:.1f} seconds...")
                                     time.sleep(wait_time)
                                 else:
