@@ -830,6 +830,19 @@ if user_signed_in:
             for key in list(st.session_state.keys()):
                 if key.endswith("_status"):
                     del st.session_state[key]
+    
+        MIRROR_TO_WIDGET = {
+            "monthly_income": "income",
+            "monthly_expenses": "expenses",
+            "monthly_savings": "savings",
+            "monthly_debt": "debt",
+            "total_investments": "investments",
+            "net_worth": "networth",
+            "emergency_fund": "emergency",
+        }
+        for src, dst in MIRROR_TO_WIDGET.items():
+            if st.session_state.get(src) not in (None, "", 0):
+                st.session_state[dst] = float(st.session_state[src])
 
 # Title and header
 st.markdown(
@@ -932,16 +945,16 @@ with st.container(border=True):
 
     col1, col2 = st.columns(2)
     with col1:
-        age = validated_number_input("Your Age", key="age", min_value=18.0, step=1.0)
-        monthly_expenses = validated_number_input("Monthly Living Expenses (₱)", key="monthly_expenses", step=50.0)
-        monthly_savings = validated_number_input("Monthly Savings (₱)", key="monthly_savings", step=50.0)
-        emergency_fund = validated_number_input("Emergency Fund Amount (₱)", key="emergency_fund", step=500.0)
-
+        age               = validated_number_input("Your Age", key="age", min_value=18.0, step=1.0)
+        monthly_expenses  = validated_number_input("Monthly Living Expenses (₱)", key="expenses", step=50.0)
+        monthly_savings   = validated_number_input("Monthly Savings (₱)", key="savings", step=50.0)
+        emergency_fund    = validated_number_input("Emergency Fund Amount (₱)", key="emergency", step=500.0)
+    
     with col2:
-        monthly_income = validated_number_input("Monthly Gross Income (₱)", key="monthly_income", step=100.0)
-        monthly_debt = validated_number_input("Monthly Debt Payments (₱)", key="monthly_debt", step=50.0)
-        total_investments = validated_number_input("Total Investments (₱)", key="total_investments", step=500.0)
-        net_worth = validated_number_input("Net Worth (₱)", key="net_worth", step=500.0)
+        monthly_income    = validated_number_input("Monthly Gross Income (₱)", key="income", step=100.0)
+        monthly_debt      = validated_number_input("Monthly Debt Payments (₱)", key="debt", step=50.0)
+        total_investments = validated_number_input("Total Investments (₱)", key="investments", step=500.0)
+        net_worth         = validated_number_input("Net Worth (₱)", key="networth", step=500.0)
 
 with st.container(border=True):
     st.markdown("""
@@ -1116,8 +1129,14 @@ if st.session_state.get('proceed'):
         ))
 
         # Update session state
-        st.session_state["FHI"] = FHI_rounded
-        st.session_state["current_savings"] = float(monthly_savings)
+        st.session_state["FHI"]               = float(FHI_rounded)
+        st.session_state["monthly_income"]    = float(monthly_income)
+        st.session_state["monthly_expenses"]  = float(monthly_expenses)
+        st.session_state["current_savings"]   = float(monthly_savings)   # Sandbox expects 'current_savings'
+        st.session_state["monthly_debt"]      = float(monthly_debt)
+        st.session_state["total_investments"] = float(total_investments)
+        st.session_state["net_worth"]         = float(net_worth)
+        st.session_state["emergency_fund"]    = float(emergency_fund)
 
 
         # Save to database if user is signed in
