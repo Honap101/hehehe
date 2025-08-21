@@ -366,8 +366,7 @@ def validated_number_input(label, key, min_value=0.0, step=1.0, help_text=None, 
     else:
         default_value = float(min_value)
 
-    # ✅ + Label + ❓ tooltip forced inline
-    help_html = f"<span style='cursor: help; color: #1f77b4;' title='{help_text}'> ❓</span>" if help_text else ""
+    help_html = f"<span style='cursor: help; color: #1f77b4;' title='{help_text}'>" if help_text else ""
     st.markdown(
         f"""
             <div style='display:flex; align-items:center; gap:6px; font-size:14px; margin-bottom:2px;'>
