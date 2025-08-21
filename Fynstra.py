@@ -56,7 +56,7 @@ st.markdown(
 
 # Add function to load user data
 def load_user_financial_data():
-    """Load user's financial data if they are signed in with debugging"""
+    """Load user's financial data if they are signed in"""
     try:
         # Import here to avoid issues if auth modules aren't available
         from supabase import create_client
@@ -67,16 +67,12 @@ def load_user_financial_data():
         # Check if user is authenticated
         user_id = st.session_state.get("user_id")
         if not user_id:
-            st.error("DEBUG: No user_id found in session state")
             return False
         
-        st.info(f"DEBUG: Attempting to load data for user_id: {user_id}")
-        
-        # Rate limiting for loads too (reduced for debugging)
+        # Rate limiting for loads
         last_load_time = st.session_state.get("last_load_time", 0)
         current_time = time.time()
-        if current_time - last_load_time < 5:  # Reduced to 5 seconds for debugging
-            st.warning(f"DEBUG: Rate limited. Last load was {current_time - last_load_time:.1f} seconds ago")
+        if current_time - last_load_time < 5:  # Wait at least 5 seconds between loads
             return False
             
         # Initialize Google Sheets client
@@ -90,51 +86,36 @@ def load_user_financial_data():
             gc = gspread.authorize(creds)
             sh = gc.open_by_key(st.secrets["SHEET_ID"])
             ws = sh.worksheet("Users")
-            st.info("DEBUG: Successfully connected to Google Sheets")
         except Exception as e:
             if "429" in str(e) or "Quota exceeded" in str(e):
                 st.warning("⏳ API rate limit reached. Please try loading again in a few minutes.")
                 return False
             else:
-                st.error(f"DEBUG: Failed to connect to database: {e}")
+                st.error(f"Failed to connect to database: {e}")
                 return False
             
-        # Get user data from Google Sheets - SINGLE API CALL
+        # Get user data from Google Sheets
         try:
             values = ws.get_all_values()
             if not values:
-                st.error("DEBUG: No data found in spreadsheet")
                 return False
                 
             header = values[0]
             rows = values[1:] if len(values) > 1 else []
             
-            st.info(f"DEBUG: Found {len(rows)} rows in spreadsheet")
-            st.info(f"DEBUG: Header columns: {header}")
-            
             # Find user row
             if "user_id" not in header:
-                st.error("DEBUG: 'user_id' column not found in header")
                 return False
                 
             uid_idx = header.index("user_id")
             user_row = None
             
-            # Debug: Show all user_ids in the sheet
-            user_ids_in_sheet = []
-            for i, row in enumerate(rows):
-                if len(row) > uid_idx:
-                    user_ids_in_sheet.append(row[uid_idx])
-                    if row[uid_idx] == user_id:
-                        user_row = row
-                        st.info(f"DEBUG: Found user row at index {i+2}: {row}")
-                        break
-            
-            st.info(f"DEBUG: User IDs in sheet: {user_ids_in_sheet}")
-            st.info(f"DEBUG: Looking for user_id: '{user_id}'")
+            for row in rows:
+                if len(row) > uid_idx and row[uid_idx] == user_id:
+                    user_row = row
+                    break
                     
             if not user_row:
-                st.error(f"DEBUG: User row not found for user_id: {user_id}")
                 return False
                 
             # Map data to session state with exact key matching
@@ -156,7 +137,6 @@ def load_user_financial_data():
                     col_idx = header.index(sheet_col)
                     if len(user_row) > col_idx:
                         cell_value = user_row[col_idx]
-                        st.info(f"DEBUG: {sheet_col} = '{cell_value}' (type: {type(cell_value)})")
                         
                         if cell_value and cell_value != "" and cell_value != "0":
                             try:
@@ -168,21 +148,17 @@ def load_user_financial_data():
                                         st.session_state[session_key] = float(int(value))
                                     else:
                                         st.session_state[session_key] = value
-                                    loaded_fields.append(f"{sheet_col}: {value}")
-                                    st.success(f"DEBUG: Loaded {session_key} = {value}")
-                            except (ValueError, TypeError) as e:
-                                st.error(f"DEBUG: Failed to convert {sheet_col}='{cell_value}': {e}")
-                else:
-                    st.warning(f"DEBUG: Column '{sheet_col}' not found in header")
+                                    loaded_fields.append(session_key)
+                            except (ValueError, TypeError):
+                                # Keep default if conversion fails
+                                pass
             
             # Update load time
             st.session_state["last_load_time"] = current_time
             
             # Success message
             if loaded_fields:
-                st.success(f"✅ Loaded {len(loaded_fields)} fields: {loaded_fields}")
-            else:
-                st.warning("DEBUG: No fields were loaded")
+                st.success(f"✅ Loaded {len(loaded_fields)} fields from your saved data")
                             
             return len(loaded_fields) > 0
             
@@ -190,18 +166,19 @@ def load_user_financial_data():
             if "429" in str(e) or "Quota exceeded" in str(e):
                 st.warning("⏳ API rate limit reached. Please try loading again in a few minutes.")
             else:
-                st.error(f"DEBUG: Error loading user data: {e}")
+                st.error(f"Error loading user data: {e}")
             return False
             
     except ImportError:
-        st.error("DEBUG: Auth modules not available")
+        # Auth modules not available
         return False
     except Exception as e:
-        st.error(f"DEBUG: Unexpected error: {e}")
+        if "429" in str(e) or "Quota exceeded" in str(e):
+            st.warning("⏳ API rate limit reached. Please try again in a few minutes.")
         return False
 
 def save_user_financial_data():
-    """Save user's financial data to the database with debugging and auto-create user row"""
+    """Save user's financial data to the database with auto-create user row"""
     try:
         from supabase import create_client
         import gspread
@@ -215,16 +192,13 @@ def save_user_financial_data():
         display_name = st.session_state.get("display_name", "")
         
         if not user_id:
-            st.error("DEBUG: No user_id found for saving")
             return False
-        
-        st.info(f"DEBUG: Attempting to save data for user_id: {user_id}")
             
         # Check if we recently saved (rate limiting)
         last_save_time = st.session_state.get("last_save_time", 0)
         current_time = time.time()
-        if current_time - last_save_time < 10:  # Reduced for debugging
-            st.info(f"DEBUG: Rate limited. Last save was {current_time - last_save_time:.1f} seconds ago")
+        if current_time - last_save_time < 30:  # Wait at least 30 seconds between saves
+            st.info("⏱️ Please wait before saving again (rate limiting)")
             return False
             
         # Prepare data to save with current input values
@@ -240,12 +214,9 @@ def save_user_financial_data():
             "last_FHI": st.session_state.get("FHI", 0)
         }
         
-        st.info(f"DEBUG: Data to save: {data_to_save}")
-        
         # Only save if we have some meaningful data
         has_meaningful_data = any(data_to_save[key] > 0 for key in data_to_save.keys() if key != "last_FHI")
         if not has_meaningful_data:
-            st.warning("DEBUG: No meaningful data to save (all values are 0)")
             return False
         
         # Initialize Google Sheets
@@ -259,30 +230,25 @@ def save_user_financial_data():
             gc = gspread.authorize(creds)
             sh = gc.open_by_key(st.secrets["SHEET_ID"])
             ws = sh.worksheet("Users")
-            st.info("DEBUG: Successfully connected to Google Sheets for saving")
         except Exception as e:
             if "429" in str(e) or "Quota exceeded" in str(e):
                 st.warning("⏳ API rate limit reached. Your data will be saved automatically later. Please try again in a few minutes.")
                 return False
             else:
-                st.error(f"DEBUG: Failed to connect to database for saving: {e}")
+                st.error(f"Failed to connect to database for saving: {e}")
                 return False
             
         # Get all data and find/create user row
         try:
             values = ws.get_all_values()
             if not values:
-                st.error("DEBUG: No data in spreadsheet for saving")
                 return False
                 
             header = values[0]
             rows = values[1:] if len(values) > 1 else []
             
-            st.info(f"DEBUG: Found {len(rows)} rows for saving")
-            
             # Find user row
             if "user_id" not in header:
-                st.error("DEBUG: 'user_id' column not found for saving")
                 return False
                 
             uid_idx = header.index("user_id")
@@ -291,13 +257,10 @@ def save_user_financial_data():
             for i, row in enumerate(rows, start=2):  # Start at 2 because of header
                 if len(row) > uid_idx and row[uid_idx] == user_id:
                     user_row_idx = i
-                    st.info(f"DEBUG: Found existing user row at index {user_row_idx}")
                     break
                     
             # CREATE USER ROW if not found
             if not user_row_idx:
-                st.info(f"DEBUG: User row not found. Creating new row for user_id: {user_id}")
-                
                 # Prepare new user row data
                 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 new_row_data = []
@@ -322,9 +285,9 @@ def save_user_financial_data():
                 try:
                     ws.append_row(new_row_data)
                     user_row_idx = len(rows) + 2  # +2 because header is row 1, and we just added a row
-                    st.success(f"DEBUG: Successfully created new user row at index {user_row_idx}")
+                    st.success("📝 Created your user profile in the database")
                 except Exception as e:
-                    st.error(f"DEBUG: Failed to create user row: {e}")
+                    st.error(f"Failed to create user profile: {e}")
                     return False
             
             # Update user row with financial data
@@ -339,10 +302,7 @@ def save_user_financial_data():
                         'range': cell_address,
                         'values': [[str(value)]]
                     })
-                    updated_fields.append(f"{field}: {value}")
-                    st.info(f"DEBUG: Will update {field} at {cell_address} with value {value}")
-                else:
-                    st.warning(f"DEBUG: Column '{field}' not found in header")
+                    updated_fields.append(field)
             
             # Batch update
             if cells_to_update:
@@ -354,7 +314,6 @@ def save_user_financial_data():
                             if "429" in str(e) or "Quota exceeded" in str(e):
                                 if i < tries - 1:
                                     wait_time = (2 ** i) + random.uniform(5, 15)
-                                    st.info(f"DEBUG: Rate limited, waiting {wait_time:.1f} seconds...")
                                     time.sleep(wait_time)
                                 else:
                                     raise
@@ -363,13 +322,12 @@ def save_user_financial_data():
                                     raise
                                 time.sleep((2 ** i) + random.random())
                 
-                st.info(f"DEBUG: Attempting to update {len(cells_to_update)} cells")
                 with_backoff(lambda: ws.batch_update(cells_to_update))
                 st.session_state["last_save_time"] = current_time
                 
-                # Show what was saved
+                # Show success message
                 if updated_fields:
-                    st.success(f"💾 Successfully saved: {updated_fields}")
+                    st.success(f"💾 Successfully saved {len(updated_fields)} financial fields!")
                     
             return len(updated_fields) > 0
             
@@ -378,17 +336,17 @@ def save_user_financial_data():
                 st.warning("⏳ API rate limit reached. Please try saving again in a few minutes.")
                 return False
             else:
-                st.error(f"DEBUG: Error saving data: {e}")
+                st.error(f"Error saving data: {e}")
                 return False
             
     except ImportError:
-        st.warning("DEBUG: Database connection not available")
+        st.warning("Database connection not available")
         return False
     except Exception as e:
         if "429" in str(e) or "Quota exceeded" in str(e):
             st.warning("⏳ API rate limit reached. Please try saving again in a few minutes.")
         else:
-            st.error(f"DEBUG: Unexpected error while saving: {e}")
+            st.error(f"Unexpected error while saving: {e}")
         return False
 
 def validated_number_input(label, key, min_value=0.0, step=1.0, help_text=None, **kwargs):
